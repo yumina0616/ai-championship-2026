@@ -1,0 +1,38 @@
+name: 기능·기술 작업
+description: 담당과 검증 기준이 있는 작업을 제안합니다.
+title: "[기능] "
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표와 사용자 가치
+      description: 구현할 결과 하나와 필요한 이유를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: 담당·리뷰·우선순위
+      description: 담당 계정, 상대 리뷰어, P0/P1을 적고 실제 Assignees와 Labels도 설정합니다.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 선행 Issue·계약
+      description: "#번호, 필요한 입력/출력, 없으면 없음. 막혀 있다면 status:blocked를 설정합니다."
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 구현 범위와 제외 범위
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 완료 조건과 검증
+      description: 재현 가능한 테스트·화면·로그·문서 변경을 체크리스트로 적습니다.
+    validations:
+      required: true

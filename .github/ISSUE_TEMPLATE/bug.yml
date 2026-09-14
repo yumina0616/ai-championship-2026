@@ -1,0 +1,31 @@
+name: 버그
+description: 재현 환경과 실제 결과를 기록합니다.
+title: "[버그] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: 환경·버전
+      description: 브라우저/OS, 코드 commit, engine/model/scenario 버전. 비밀키와 개인정보는 제외합니다.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 재현 방법
+      description: 입력 fixture·seed·조작 순서·안전한 로그를 첨부합니다.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 기대 결과와 실제 결과
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 영향·담당·관련 Issue
+      description: 데이터 손상·권한·잘못된 제어 여부와 회귀 테스트 후보를 적습니다.

@@ -1,0 +1,24 @@
+name: 저장소 기반 검증
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  docs:
+    name: 문서 검증
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 문서 링크와 JSON 예시 검사
+        run: python3 scripts/check_docs.py
+      - name: 검사기 회귀 테스트
+        run: python3 -m unittest discover -s tests -v
+      - name: 공백 오류 검사
+        run: git show --format= --check HEAD
