@@ -117,6 +117,15 @@ export default function App() {
     }
   });
   const [preferenceError, setPreferenceError] = useState("");
+  const [quality, setQuality] = useState<"high" | "low">(() => {
+    try {
+      return localStorage.getItem("parkside-quality") === "low"
+        ? "low"
+        : "high";
+    } catch {
+      return "high";
+    }
+  });
   const [mode, setMode] = useState<Mode>("human");
   const [camera, setCamera] = useState<CameraMode>("orbit");
   const [sensors, setSensors] = useState(false);
@@ -342,7 +351,8 @@ export default function App() {
     try {
       if (cinematicEntry) {
         await new Promise<void>((resolve) => window.setTimeout(resolve, 320));
-        if (id !== requestId.current || controller.signal.aborted) return;
+        if (id !== requestId.current) return;
+        if (controller.signal.aborted) throw Error("진입이 취소됐어요.");
         setView("drive");
         setDeparting(false);
       }
@@ -362,6 +372,7 @@ export default function App() {
         });
       }
       if (id === requestId.current) {
+        if (controller.signal.aborted) throw Error("진입이 취소됐어요.");
         driving.start();
         setState("ready");
       }
@@ -473,6 +484,7 @@ export default function App() {
             key={sceneRevision}
             template={template}
             customScenario={customScenario}
+            quality={quality}
             result={driving.result}
             motion={driving.motion}
             opening={opening}
@@ -886,6 +898,29 @@ export default function App() {
                   ? "주행은 이 브라우저에 최근 5회만 보관해요."
                   : "다음 주행은 기록하지 않아요. 기존 기록은 유지돼요."}{" "}
                 서버 전송·학습 기여는 하지 않아요.
+              </p>
+              <label className="local-record-choice">
+                그래픽 품질
+                <select
+                  aria-label="그래픽 품질"
+                  value={quality}
+                  onChange={(e) => {
+                    const next = e.target.value as "high" | "low";
+                    setQuality(next);
+                    try {
+                      localStorage.setItem("parkside-quality", next);
+                    } catch {
+                      setPreferenceError("그래픽 설정은 이번 탭에만 적용돼요.");
+                    }
+                  }}
+                >
+                  <option value="high">고화질</option>
+                  <option value="low">성능 우선</option>
+                </select>
+              </label>
+              <p className="availability">
+                성능 우선은 그림자와 렌더 해상도만 낮춰요. 차량 물리·충돌·센서
+                계산은 동일해요.
               </p>
               <label className="local-record-choice">
                 <input

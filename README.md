@@ -79,7 +79,7 @@ python3 -m unittest discover -s tests -v
 
 | 담당 | 지금 할 일 | 다음 연결 |
 | --- | --- | --- |
-| JH-9568 | [#4](https://github.com/yumina0616/ai-championship-2026/issues/4) 웹 기본 화면·초기 preview 마무리 | [#6](https://github.com/yumina0616/ai-championship-2026/issues/6) 편집기 → [#8](https://github.com/yumina0616/ai-championship-2026/issues/8) 주행 기록·실행 화면 보완 |
+| JH-9568 | 편집기 #26 → 내 맵 운전 #27 → 로컬 기록 #28 → 파일 공유 #29 순차 PR 제출 | [웹 안정화·병합 순서](docs/web-stability.md) 검증 후 팀원 모델 통합, 공개 배포는 보류 |
 | yumina0616 | 차량·센서·기준 제어기 PR #21/#22/#23 main 병합 완료 | [#11](https://github.com/yumina0616/ai-championship-2026/issues/11) 학습 정책·추론 방식 결정 |
 
 전체 할당·의존 관계는 [개발 계획](docs/mvp-plan.md), 실시간 상태는 [Issues](https://github.com/yumina0616/ai-championship-2026/issues), 제출 범위는 [마일스톤](https://github.com/yumina0616/ai-championship-2026/milestone/1)에서 확인합니다.
@@ -94,6 +94,10 @@ python3 -m unittest discover -s tests -v
 | [재사용 검증](docs/integration-spike.md) | 기존 시뮬레이터 정보와 선택 근거 |
 | [아키텍처](docs/architecture.md) | 웹·엔진·정책·기록 책임 경계 |
 | [웹 개발 안내](web/README.md) | UI 실행·디자인·실제 엔진 연결·배포 |
+| [맵 편집](docs/map-editor.md) | 탑뷰 배치·검증·운전 snapshot |
+| [로컬 기록](docs/local-episodes.md) | 관측/행동 정렬·상태 재생·파일 검증 |
+| [파일 공유](docs/local-sharing.md) | 포함 항목 확인·보관 선택·삭제 |
+| [웹 안정화](docs/web-stability.md) | 품질 옵션·오류 복구·CI·PR 순서 |
 | [공통 계약](docs/contracts.md) | 좌표·제어·센서·Episode 초안 |
 | [데이터와 학습](docs/data-learning.md) | 동의·학습 누출·평가·정책 성장 |
 | [개발 규칙](docs/development.md) | Issue·브랜치·한국어 커밋·PR·리뷰 |

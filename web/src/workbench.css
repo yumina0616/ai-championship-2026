@@ -190,3 +190,11 @@
   height: 20px;
   accent-color: #bed5c9;
 }
+.local-record-choice select {
+  color: #e6eee9;
+  background: #20282b;
+  border: 1px solid #596861;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 8px 0;
+}

@@ -6,10 +6,17 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   web:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,14 +36,15 @@ jobs:
         working-directory: web
       - run: npx playwright install --with-deps chromium
         working-directory: web
-      - run: npm test
+      - run: npm test -- --shard=${{ matrix.shard }}/3
         working-directory: web
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: web-check-results
+          name: web-check-results-${{ matrix.shard }}
           path: web/test-results/
       - uses: actions/upload-artifact@v4
+        if: success() && matrix.shard == 1
         with:
           name: parking-web-preview
           path: web/dist/

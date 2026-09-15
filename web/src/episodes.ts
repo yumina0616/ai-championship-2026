@@ -417,13 +417,22 @@ export async function saveEpisode(e: LocalEpisode) {
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction("episodes", "readwrite"),
       store = tx.objectStore("episodes");
-    store.put({ id: e.header.episodeId, startedAt: e.header.startedAt, text });
-    const all = store.getAll();
-    all.onsuccess = () => {
-      const rows = all.result.sort((a, b) =>
-        b.startedAt.localeCompare(a.startedAt),
-      );
-      for (const row of rows.slice(5)) store.delete(row.id);
+    const existing = store.getKey(e.header.episodeId);
+    existing.onsuccess = () => {
+      store.put({
+        id: e.header.episodeId,
+        startedAt: e.header.startedAt,
+        text,
+      });
+      // 체크포인트 교체 때는 다른 기록 본문을 읽지 않는다. 새 실행에서만 보관 상한 정리.
+      if (existing.result !== undefined) return;
+      const all = store.getAll();
+      all.onsuccess = () => {
+        const rows = all.result.sort((a, b) =>
+          b.startedAt.localeCompare(a.startedAt),
+        );
+        for (const row of rows.slice(5)) store.delete(row.id);
+      };
     };
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
