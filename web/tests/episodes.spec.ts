@@ -145,7 +145,7 @@ test("실제 주행을 중단하면 IndexedDB에 남고 새로고침 후 복원"
   await expect(
     page.getByRole("heading", { name: "기록 재생 · AI 실시간 운전 아님" }),
   ).toBeVisible();
-  await page.screenshot({ path: "/private/tmp/parkside-record-player.png" });
+  await page.screenshot({ path: test.info().outputPath("record-player.png") });
 });
 
 test("저장소 거부 시에도 메모리 기록 내보내기가 가능", async ({ page }) => {
