@@ -109,6 +109,14 @@ export default function App() {
   const [view, setView] = useState<"landing" | "drive">("landing");
   const [template, setTemplate] = useState<TemplateId>("open");
   const [customMap, setCustomMap] = useState<ParkingMap | null>(null);
+  const [recordLocally, setRecordLocally] = useState(() => {
+    try {
+      return localStorage.getItem("parkside-record-locally") !== "off";
+    } catch {
+      return true;
+    }
+  });
+  const [preferenceError, setPreferenceError] = useState("");
   const [mode, setMode] = useState<Mode>("human");
   const [camera, setCamera] = useState<CameraMode>("orbit");
   const [sensors, setSensors] = useState(false);
@@ -151,7 +159,7 @@ export default function App() {
     () => (customMap ? mapScenario(customMap) : undefined),
     [customMap],
   );
-  const driving = useDriving(template, customScenario);
+  const driving = useDriving(template, customScenario, recordLocally);
   driving.context.current = {
     viewMode: camera,
     assistanceFlags: [
@@ -874,8 +882,37 @@ export default function App() {
                 </button>
               </div>
               <p className="availability">
-                주행은 이 브라우저에 최근 5회만 보관해요. 서버 전송·학습 기여는
-                하지 않아요.
+                {recordLocally
+                  ? "주행은 이 브라우저에 최근 5회만 보관해요."
+                  : "다음 주행은 기록하지 않아요. 기존 기록은 유지돼요."}{" "}
+                서버 전송·학습 기여는 하지 않아요.
+              </p>
+              <label className="local-record-choice">
+                <input
+                  type="checkbox"
+                  checked={recordLocally}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setRecordLocally(enabled);
+                    try {
+                      localStorage.setItem(
+                        "parkside-record-locally",
+                        enabled ? "on" : "off",
+                      );
+                      setPreferenceError("");
+                    } catch {
+                      setPreferenceError(
+                        "설정은 이번 탭에만 적용돼요. 새로고침하면 다시 확인해주세요.",
+                      );
+                    }
+                  }}
+                />{" "}
+                이 브라우저에 주행 기록 보관
+              </label>
+              {preferenceError && <p role="status">{preferenceError}</p>}
+              <p className="availability">
+                학습 기여: 제공하지 않음 · 켜거나 동의하지 않아도 모든 개인
+                연습을 사용할 수 있어요.
               </p>
               <EpisodeLibrary
                 onForget={driving.forgetEpisode}
@@ -1208,8 +1245,11 @@ export default function App() {
                     </button>
                   </div>
                   <small className="result-note">
-                    이번 실행의 실제 측정값 · 차고의 내 주행 기록에서 저장
-                    상태를 재생할 수 있어요. AI 비교는 아직 제공하지 않아요.
+                    이번 실행의 실제 측정값 ·{" "}
+                    {recordLocally
+                      ? "차고의 내 주행 기록에서 저장 상태를 재생할 수 있어요."
+                      : "로컬 기록을 꺼서 이번 주행은 보관하지 않았어요."}{" "}
+                    AI 비교는 아직 제공하지 않아요.
                   </small>
                   {driving.storageError && (
                     <p role="alert">{driving.storageError}</p>
@@ -1493,9 +1533,10 @@ export default function App() {
                 시도와 실패를 관찰할 수 있는 참여형 주차 실험실을 만들고 있어요.
               </p>
               <p>
-                지금은 직접 운전·거리 센서·결과 확인이 동작합니다. 학습된
-                맵 편집과 로컬 기록 재생을 제공해요. 마스코트, 기록 기여와 비교는 개발 예정이에요. 참여
-                수가 늘었다고 모델 성능이 자동으로 좋아졌다고 표현하지 않습니다.
+                지금은 직접 운전·거리 센서·결과 확인이 동작합니다. 학습된 맵
+                편집과 로컬 기록 재생을 제공해요. 마스코트, 기록 기여와 비교는
+                개발 예정이에요. 참여 수가 늘었다고 모델 성능이 자동으로
+                좋아졌다고 표현하지 않습니다.
               </p>
               <p className="dialog-note">
                 PARKSIDE는 임시 이름입니다. 주행 데이터는 서버에 전송하지
