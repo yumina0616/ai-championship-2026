@@ -95,6 +95,8 @@ git diff --check
 
 Linux CI는 Xvfb 가상 화면에서 실제 Chromium을 열고 Mesa llvmpipe로 WebGL을 렌더링합니다. 이는 CPU 그래픽 드라이버이며 가상 센서/물리/충돌을 mock하는 설정이 아닙니다. `glxinfo -B` 결과를 CI 로그에 남깁니다. 일반 로컬 테스트는 headless Chromium/SwANGLE을 사용합니다. 이 설정은 테스트 브라우저에만 적용되며 배포 앱은 바꾸지 않습니다.
 
+CI의 소프트웨어 GPU 차단 목록만 `--ignore-gpu-blocklist`로 해제합니다. 테스트 시작 전 `tests/check-webgl.ts`에서 실제 Chromium의 WebGL2 초기화·llvmpipe 드라이버·빨간 픽셀 출력을 검증합니다. 사전 검사가 실패하면 환경 오류로 즉시 종료하며, 빈 Canvas에서 UI만 검사하고 통과시키지 않습니다. 이 브라우저는 저장소의 로컬 테스트 페이지 전용입니다.
+
 Ubuntu에서 CI 그래픽 경로를 재현하려면 의존성 설치 후 `web/`에서 다음을 실행합니다. 기존 5173 dev server는 로컬에서 재사용하며, CI는 별도 서버를 시작합니다.
 
 ```bash
