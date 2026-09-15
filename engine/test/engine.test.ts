@@ -36,6 +36,15 @@ function straightScenario(overrides: Partial<Scenario> = {}): Scenario {
       noiseStdM: 0,
     },
     goalPose: { xM: 5, yM: 0, yawRad: 0 },
+    goalSpace: { centerXM: 5, centerYM: 0, lengthM: 1, widthM: 1, yawRad: 0 },
+    successCriteria: {
+      positionToleranceM: 0.25,
+      yawToleranceRad: 0.0872665,
+      stoppedSpeedMps: 0.05,
+      holdTimeS: 1,
+      requireFootprintInsideGoal: true,
+      collisionTerminates: true,
+    },
     seed: 42,
     ...overrides,
   };

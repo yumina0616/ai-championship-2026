@@ -12,3 +12,13 @@ export { loadScenarioFromJson, type ScenarioJson } from "./scenarioLoader.js";
 export { computeSensorScan } from "./sensor.js";
 export { computeGoalRelative } from "./goal.js";
 export { createRng, nextGaussian } from "./rng.js";
+export {
+  baselineReverseParkController,
+  type BaselineControllerOptions,
+} from "./baselineController.js";
+export {
+  runBaselineRollout,
+  splitScenariosByLayoutGroup,
+  type RolloutOptions,
+  type ScenarioSplit,
+} from "./rollout.js";

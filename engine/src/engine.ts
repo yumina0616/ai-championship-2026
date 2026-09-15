@@ -1,7 +1,11 @@
 // docs/contracts.md "엔진 인터페이스" 절의 reset()/step() 구현.
-// #5(차량·충돌) + #7(센서·목표 상대좌표) 범위. 성공 판정(#9)은 evaluateOutcome()에 자리만 비워뒀다.
-import { clampCommand, integrateBicycleModel } from "./vehicle.js";
-import { footprintCollides, footprintOutOfBounds } from "./collision.js";
+// #5(차량·충돌) + #7(센서·목표 상대좌표) + #9(성공 판정) 범위.
+import { clampCommand, integrateBicycleModel, normalizeAngle } from "./vehicle.js";
+import {
+  footprintCollides,
+  footprintFullyInsideGoal,
+  footprintOutOfBounds,
+} from "./collision.js";
 import { computeSensorScan } from "./sensor.js";
 import { computeGoalRelative } from "./goal.js";
 import { createRng } from "./rng.js";
@@ -28,6 +32,7 @@ export class ParkingEngine {
   private rng: () => number = createRng(0);
   private lastSensorUpdateSimTimeS = -Infinity;
   private cachedSensorScan: Observation["sensors"] = [];
+  private successHoldStartSimTimeS: number | null = null;
 
   /** 검증된 scenario로 새 episode를 시작한다. 실패 시 값을 반환하지 않고 throw한다. */
   reset(scenario: Scenario): Observation {
@@ -50,6 +55,7 @@ export class ParkingEngine {
     this.rng = createRng(scenario.seed ?? 0);
     this.lastSensorUpdateSimTimeS = -Infinity; // 첫 관측은 항상 새로 계산
     this.cachedSensorScan = [];
+    this.successHoldStartSimTimeS = null;
 
     return this.buildObservation(scenario);
   }
@@ -116,17 +122,54 @@ export class ParkingEngine {
 
   private evaluateOutcome(scenario: Scenario): Outcome {
     // 충돌을 먼저 검사한다 — docs/contracts.md "같은 tick에 충돌+성공 동시 발생 시 충돌 우선".
-    // #9에서 성공 판정을 추가할 때도 이 충돌 검사 다음, timeout 검사 이전에 끼워 넣어야 순서가 유지된다.
     const collided =
       footprintCollides(this.pose, scenario.vehicle, scenario.obstacles) ||
       footprintOutOfBounds(this.pose, scenario.vehicle, scenario.bounds);
-    if (collided) return { terminated: true, reason: "collision" };
+    if (collided) {
+      this.successHoldStartSimTimeS = null;
+      return { terminated: true, reason: "collision" };
+    }
+
+    if (this.isSuccessConditionMetNow(scenario)) {
+      if (this.successHoldStartSimTimeS === null) {
+        this.successHoldStartSimTimeS = this.simTimeS;
+      }
+      const heldForS = this.simTimeS - this.successHoldStartSimTimeS;
+      if (heldForS >= scenario.successCriteria.holdTimeS) {
+        return { terminated: true, reason: "success" };
+      }
+    } else {
+      this.successHoldStartSimTimeS = null;
+    }
 
     if (this.simTimeS >= scenario.timeoutSimS) {
       return { terminated: true, reason: "timeout" };
     }
 
     return { terminated: false, reason: null };
+  }
+
+  /** 목표 공간 포함 + 위치/각도 오차 + 정지 속도 — hold_time_s는 evaluateOutcome이 별도로 누적한다. */
+  private isSuccessConditionMetNow(scenario: Scenario): boolean {
+    const criteria = scenario.successCriteria;
+    if (
+      criteria.requireFootprintInsideGoal &&
+      !footprintFullyInsideGoal(this.pose, scenario.vehicle, scenario.goalSpace)
+    ) {
+      return false;
+    }
+    const positionErrorM = Math.hypot(
+      this.pose.xM - scenario.goalPose.xM,
+      this.pose.yM - scenario.goalPose.yM
+    );
+    if (positionErrorM > criteria.positionToleranceM) return false;
+
+    const yawErrorRad = Math.abs(normalizeAngle(this.pose.yawRad - scenario.goalPose.yawRad));
+    if (yawErrorRad > criteria.yawToleranceRad) return false;
+
+    if (Math.abs(this.lastAppliedCommand.targetSpeedMps) > criteria.stoppedSpeedMps) return false;
+
+    return true;
   }
 }
 
@@ -156,6 +199,15 @@ function assertFinite(scenario: Scenario): void {
     scenario.goalPose.xM,
     scenario.goalPose.yM,
     scenario.goalPose.yawRad,
+    scenario.goalSpace.centerXM,
+    scenario.goalSpace.centerYM,
+    scenario.goalSpace.lengthM,
+    scenario.goalSpace.widthM,
+    scenario.goalSpace.yawRad,
+    scenario.successCriteria.positionToleranceM,
+    scenario.successCriteria.yawToleranceRad,
+    scenario.successCriteria.stoppedSpeedMps,
+    scenario.successCriteria.holdTimeS,
     ...scenario.obstacles.flatMap((o) => [o.centerXM, o.centerYM, o.lengthM, o.widthM, o.yawRad]),
   ];
   if (numbers.some((n) => !Number.isFinite(n))) {
