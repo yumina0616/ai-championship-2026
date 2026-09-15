@@ -1,8 +1,19 @@
 import { test, expect } from "@playwright/test";
-import { driverCommand, canShift } from "../src/driver-controls";
+import { driverCommand, canShift, keyInput } from "../src/driver-controls";
 import { makeScenario } from "../src/driving";
 const vehicle = makeScenario("open").vehicle;
 const zero = { targetSpeedMps: 0, targetSteeringRad: 0 };
+test("방향키 액셀은 D ↑ / R ↓, 반대 방향키는 제동이며 W/S는 고정", () => {
+  expect(keyInput("ArrowUp", "D")).toBe("throttle");
+  expect(keyInput("ArrowDown", "D")).toBe("brake");
+  expect(keyInput("ArrowDown", "R")).toBe("throttle");
+  expect(keyInput("ArrowUp", "R")).toBe("brake");
+  for (const gear of ["P", "D", "R"] as const) {
+    expect(keyInput("KeyW", gear)).toBe("throttle");
+    expect(keyInput("KeyS", gear)).toBe("brake");
+  }
+  expect(keyInput("KeyZ", "D")).toBeNull();
+});
 test("드래그 조향 축은 각도 제한을 지키고 해제하면 중앙 복원", () => {
   const command = driverCommand("D", new Set(), zero, vehicle, 0.05, 5);
   expect(command.targetSteeringRad).toBe(vehicle.maxSteeringRad);

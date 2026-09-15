@@ -11,9 +11,11 @@ import type { TemplateId } from "./preview";
 import {
   driverCommand,
   canShift,
+  keyInput,
   type Gear,
   type DriverInput,
 } from "./driver-controls";
+import type { MotionFrame } from "./motion";
 
 // 렌더링과 물리가 공유하는 프리셋. UI 좌표는 (x, 높이, -y), pose는 뒷차축 기준입니다.
 export function makeScenario(template: TemplateId): Scenario {
@@ -133,7 +135,14 @@ export function reverseGuide(
 export function useDriving(template: TemplateId) {
   const scenario = useMemo(() => makeScenario(template), [template]);
   const engine = useRef(new ParkingEngine());
-  const inputs = useRef(new Set<DriverInput>());
+  const inputs = useRef(new Map<string, DriverInput>());
+  const motion = useRef<MotionFrame>({
+    previous: null,
+    current: null,
+    atMs: 0,
+    remainderS: 0,
+    running: false,
+  });
   const analogSteer = useRef<number | null>(null);
   const gearRef = useRef<Gear>("P");
   const previous = useRef({ targetSpeedMps: 0, targetSteeringRad: 0 });
@@ -164,13 +173,21 @@ export function useDriving(template: TemplateId) {
     previous.current = { targetSpeedMps: 0, targetSteeringRad: 0 };
     try {
       const observation = engine.current.reset(structuredClone(scenario));
-      setResult({
+      const initial: StepResult = {
         observation,
         poseTruth: { ...scenario.start },
         simTimeS: 0,
         appliedCommand: { ...previous.current },
         outcome: { terminated: false, reason: null },
-      });
+      };
+      motion.current = {
+        previous: initial,
+        current: initial,
+        atMs: performance.now(),
+        remainderS: 0,
+        running: false,
+      };
+      setResult(initial);
       return true;
     } catch (error) {
       setFailure(
@@ -183,10 +200,12 @@ export function useDriving(template: TemplateId) {
     reset();
   }, [reset]);
   const pause = useCallback(() => {
+    motion.current.running = false;
     clearInputs();
     setPaused(true);
   }, [clearInputs]);
   const stop = useCallback(() => {
+    motion.current.running = false;
     clearInputs();
     setActive(false);
   }, [clearInputs]);
@@ -216,31 +235,27 @@ export function useDriving(template: TemplateId) {
     [clearInputs],
   );
   const press = useCallback(
-    (input: DriverInput) => {
+    (input: DriverInput, source: string = input) => {
       if (!active || paused) return;
+      if (inputs.current.has(source)) return;
       if (input === "throttle" && gearRef.current === "P")
         setMessage("P에서는 움직이지 않아요. D 또는 R을 선택해주세요.");
-      inputs.current.add(input);
-      setHeld([...inputs.current]);
+      inputs.current.set(source, input);
+      setHeld([...new Set(inputs.current.values())]);
     },
     [active, paused],
   );
-  const release = useCallback((input: DriverInput) => {
-    inputs.current.delete(input);
-    setHeld([...inputs.current]);
+  const release = useCallback((input: DriverInput, source: string = input) => {
+    if (!inputs.current.delete(source)) return;
+    setHeld([...new Set(inputs.current.values())]);
   }, []);
   useEffect(() => {
     if (!active || paused) return;
-    const map: Record<string, DriverInput> = {
-      KeyW: "throttle",
-      ArrowUp: "throttle",
-      KeyS: "brake",
-      ArrowDown: "brake",
-      KeyA: "left",
-      ArrowLeft: "left",
-      KeyD: "right",
-      ArrowRight: "right",
-    };
+    // 일시정지 중 최신 위치를 표시했으므로 재개 때 이전 tick으로 되돌아가지 않습니다.
+    motion.current.previous = motion.current.current;
+    motion.current.atMs = performance.now();
+    motion.current.remainderS = 0;
+    motion.current.running = true;
     const down = (e: KeyboardEvent) => {
       if (
         e.altKey ||
@@ -257,9 +272,10 @@ export function useDriving(template: TemplateId) {
         e.preventDefault();
         pause();
       }
-      if (map[e.code]) {
+      const input = keyInput(e.code, gearRef.current);
+      if (input) {
         e.preventDefault();
-        press(map[e.code]);
+        if (!e.repeat) press(input, e.code);
       }
       const gears: Record<string, Gear> = { KeyE: "D", KeyQ: "R", KeyP: "P" };
       if (gears[e.code] && !e.repeat) {
@@ -268,7 +284,8 @@ export function useDriving(template: TemplateId) {
       }
     };
     const up = (e: KeyboardEvent) => {
-      if (map[e.code]) release(map[e.code]);
+      const input = keyInput(e.code, gearRef.current);
+      if (input) release(input, e.code);
     };
     const hidden = () => {
       if (document.hidden) pause();
@@ -289,7 +306,7 @@ export function useDriving(template: TemplateId) {
           last = engine.current.step(
             driverCommand(
               gearRef.current,
-              inputs.current,
+              new Set(inputs.current.values()),
               previous.current,
               scenario.vehicle,
               FIXED_DT_S,
@@ -297,6 +314,8 @@ export function useDriving(template: TemplateId) {
             ),
           );
           previous.current = last.appliedCommand;
+          motion.current.previous = motion.current.current;
+          motion.current.current = last;
           accumulator -= FIXED_DT_S;
           if (last.outcome.terminated) {
             setResult(last);
@@ -304,6 +323,8 @@ export function useDriving(template: TemplateId) {
             return;
           }
         }
+        motion.current.atMs = now;
+        motion.current.remainderS = accumulator;
         if (last) setResult(last);
       } catch (error) {
         setFailure(
@@ -317,6 +338,7 @@ export function useDriving(template: TemplateId) {
     frame = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(frame);
+      motion.current.running = false;
       inputs.current.clear();
       analogSteer.current = null;
       window.removeEventListener("keydown", down);
@@ -326,6 +348,7 @@ export function useDriving(template: TemplateId) {
     };
   }, [active, paused, pause, stop, press, release, scenario, shift]);
   return {
+    motion,
     scenario,
     result,
     active,

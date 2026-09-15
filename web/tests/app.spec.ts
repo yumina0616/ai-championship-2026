@@ -3,7 +3,10 @@ import { test, expect, type Page } from "@playwright/test";
 async function enter(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "바로 운전하기" }).click();
-  await expect(page.getByRole("button", { name: "D 기어" })).toBeEnabled();
+  // 리소스 자체 timeout(8초)과 두 WebGL 탭의 소프트웨어 렌더 지연을 포함합니다.
+  await expect(page.getByRole("button", { name: "D 기어" })).toBeEnabled({
+    timeout: 10_000,
+  });
   await expect(page.locator(".mission-hud h1")).toBeFocused();
 }
 async function brake(page: Page) {
@@ -16,7 +19,9 @@ async function brake(page: Page) {
   await page.keyboard.up("KeyS");
 }
 
-test("기어 단축키·드래그 조향·자동 후방 시점·센서 원시값", async ({ page }) => {
+test("기어 단축키·시점 유지와 수동 후방 선택·드래그 조향·센서 원시값", async ({
+  page,
+}) => {
   test.setTimeout(60_000);
   await enter(page);
   await page.keyboard.press("KeyQ");
@@ -25,8 +30,23 @@ test("기어 단축키·드래그 조향·자동 후방 시점·센서 원시값
     "true",
   );
   await expect(
-    page.getByRole("button", { name: "후방 시점", exact: true }),
+    page.getByRole("button", { name: "차량 추적", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
+  const rear = page.getByRole("button", { name: "후방 시점", exact: true });
+  await expect(rear).toHaveAttribute("aria-pressed", "false");
+  await rear.click();
+  await expect(rear).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("KeyE");
+  await expect(page.getByRole("button", { name: "D 기어" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(rear).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("KeyP");
+  await expect(rear).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("KeyQ");
+  await expect(rear).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "차량 추적", exact: true }).click();
   const wheel = page.getByRole("slider", { name: "드래그 핸들" });
   const box = (await wheel.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -46,6 +66,9 @@ test("기어 단축키·드래그 조향·자동 후방 시점·센서 원시값
   const before = await page.getByTestId("raw-range").innerText();
   await page.keyboard.press("KeyE");
   await page.keyboard.down("KeyW");
+  await expect(
+    page.getByRole("button", { name: "차량 추적", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("raw-range")).not.toHaveText(before);
   await brake(page);
   await page.getByRole("button", { name: "일시정지", exact: true }).click();
@@ -184,7 +207,7 @@ test("센서 경고음은 동의한 재생 중에만 예약되고 일시정지·
   expect((await stats()).active).toBe(0);
   await page.getByRole("button", { name: "차고", exact: true }).click();
   expect((await stats()).closed).toBe(1);
-  await page.getByRole("button", { name: "바로 운전하기" }).click();
+  await page.getByRole("button", { name: "이 공간에서 시작" }).click();
   await expect(page.locator(".mission-hud h1")).toBeFocused();
   await page.getByRole("button", { name: "센서 경고음" }).click();
   await page.getByRole("button", { name: "센서 경고음" }).click();
@@ -211,6 +234,7 @@ test("랜딩·차고 선택·키보드·모델 준비 상태·가이드", async 
   await expect(
     page.getByRole("link", { name: "조작 영역으로 바로가기" }),
   ).toBeFocused();
+  await page.getByRole("button", { name: "오프닝 건너뛰기" }).click();
   await expect(
     page.getByRole("heading", { name: "주차를 플레이하다." }),
   ).toBeVisible();

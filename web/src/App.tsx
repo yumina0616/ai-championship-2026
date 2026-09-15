@@ -37,7 +37,8 @@ import {
 import { useDriving } from "./driving";
 import type { DriverInput, Gear } from "./driver-controls";
 import type { CameraMode } from "./ParkingScene";
-import SensorAssist from "./SensorAssist";
+import SensorAssist, { sensorFeedback } from "./SensorAssist";
+import { chapterAt, storyChapters } from "./story";
 const ParkingScene = lazy(() => import("./ParkingScene"));
 
 function Logo() {
@@ -114,7 +115,27 @@ export default function App() {
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const [motionPaused, setMotionPaused] = useState(false);
-  const [hasDriven, setHasDriven] = useState(false);
+  const [introDismissed, setIntroDismissed] = useState(false);
+  const [opening, setOpening] = useState(!reduceMotion);
+  const [openingFade, setOpeningFade] = useState(false);
+  const finishOpening = useCallback(() => {
+    setOpening(false);
+    setOpeningFade(true);
+  }, []);
+  useEffect(() => {
+    if (!openingFade) return;
+    const timer = window.setTimeout(() => setOpeningFade(false), 800);
+    return () => window.clearTimeout(timer);
+  }, [openingFade]);
+  useEffect(() => {
+    if (reduceMotion || motionPaused || template !== "open") setOpening(false);
+  }, [reduceMotion, motionPaused, template]);
+  const [departing, setDeparting] = useState(false);
+  const [storyProgress, setStoryProgress] = useState(0);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIntroDismissed(true), 2000);
+    return () => window.clearTimeout(timer);
+  }, []);
   const [sceneBox, setSceneBox] = useState({
     top: 0,
     height: window.innerHeight,
@@ -131,6 +152,8 @@ export default function App() {
   const resultTitle = useRef<HTMLHeadingElement>(null);
   const garageStart = useRef<HTMLButtonElement>(null);
   const sceneFailed = useCallback(() => {
+    setDeparting(false);
+    setView("drive");
     requestId.current += 1;
     abort.current?.abort();
     driving.stop();
@@ -157,6 +180,9 @@ export default function App() {
       .map((r) => r.rangeM) ?? [];
   const nearest = ranges.length ? Math.min(...ranges) : null;
   const controlsDisabled = state !== "ready" || driving.paused || !!ended;
+  const staticStory = reduceMotion || motionPaused;
+  const chapter = staticStory ? 0 : chapterAt(storyProgress);
+  const storySensor = sensorFeedback(driving.result, driving.scenario);
 
   // 같은 Canvas를 유지하고 표시 영역만 옮겨 카메라/조명 문맥이 끊기지 않게 합니다.
   useLayoutEffect(() => {
@@ -164,29 +190,34 @@ export default function App() {
       view === "landing" ? ".hero" : ".driving-stage",
     );
     if (!area) return;
+    let frame = 0;
     const measure = () => {
       const rect = area.getBoundingClientRect();
-      setSceneBox({ top: rect.top + window.scrollY, height: rect.height });
+      setSceneBox({
+        top: view === "landing" ? rect.top : 0,
+        height:
+          view === "landing" ? rect.height : Math.max(window.innerHeight, 780),
+      });
+    };
+    const scroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(area);
+    const track = document.querySelector(".story-scroll");
+    if (track) observer.observe(track);
     window.addEventListener("resize", measure);
+    window.addEventListener("scroll", scroll, { passive: true });
     return () => {
+      cancelAnimationFrame(frame);
       observer.disconnect();
       window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", scroll);
     };
-  }, [view]);
+  }, [view, staticStory]);
 
-  useEffect(() => {
-    setCamera((current) =>
-      current === "follow" || current === "rear"
-        ? driving.gear === "R"
-          ? "rear"
-          : "follow"
-        : current,
-    );
-  }, [driving.gear]);
   useEffect(() => {
     if (!parkConfirm) return;
     const confirm = (event: KeyboardEvent) => {
@@ -257,16 +288,20 @@ export default function App() {
   }, [view, state, driving.pause]);
 
   async function start() {
+    if (state === "loading") return;
     setMode("human");
     if (state === "error") setSceneRevision((n) => n + 1);
-    setHasDriven(true);
+    setIntroDismissed(true);
+    setOpening(false);
+    setOpeningFade(false);
     const cinematicEntry = view === "landing" && !reduceMotion && !motionPaused;
     const began = performance.now();
     const id = ++requestId.current;
     abort.current?.abort();
     const controller = new AbortController();
     abort.current = controller;
-    setView("drive");
+    setDeparting(cinematicEntry);
+    if (!cinematicEntry) setView("drive");
     setState("loading");
     setError("");
     setCamera("follow");
@@ -274,6 +309,12 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "instant" });
     const timeout = window.setTimeout(() => controller.abort("timeout"), 8000);
     try {
+      if (cinematicEntry) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 320));
+        if (id !== requestId.current || controller.signal.aborted) return;
+        setView("drive");
+        setDeparting(false);
+      }
       await loadPreview(controller.signal);
       if (cinematicEntry && !controller.signal.aborted) {
         await new Promise<void>((resolve) => {
@@ -284,7 +325,7 @@ export default function App() {
           };
           const timer = window.setTimeout(
             done,
-            Math.max(0, 1200 - (performance.now() - began)),
+            Math.max(0, 1700 - (performance.now() - began)),
           );
           controller.signal.addEventListener("abort", done, { once: true });
         });
@@ -307,6 +348,7 @@ export default function App() {
     }
   }
   function leave() {
+    setDeparting(false);
     requestId.current++;
     abort.current?.abort();
     driving.reset();
@@ -379,7 +421,11 @@ export default function App() {
         "app cinema " +
         view +
         (state === "loading" ? " entering" : "") +
-        (motionPaused ? " motion-paused" : "")
+        (departing ? " departing" : "") +
+        (staticStory ? " static-story" : "") +
+        (motionPaused ? " motion-paused" : "") +
+        (opening ? " opening-drive" : "") +
+        (openingFade ? " opening-handoff" : "")
       }
     >
       <div
@@ -396,18 +442,24 @@ export default function App() {
             key={sceneRevision}
             template={template}
             result={driving.result}
-            cameraMode={view === "landing" ? "orbit" : camera}
-            sensors={sensors}
+            motion={driving.motion}
+            opening={opening}
+            onOpeningDone={finishOpening}
+            cameraMode={view === "landing" && !departing ? "orbit" : camera}
+            sensors={sensors || (view === "landing" && chapter === 2)}
+            onStoryProgress={setStoryProgress}
             grid={view === "drive" && grid}
             reducedMotion={reduceMotion || motionPaused}
             brake={driving.held.includes("brake")}
             reverse={driving.gear === "R"}
-            driving={view === "drive"}
-            onUnavailable={view === "drive" ? sceneFailed : undefined}
+            driving={view === "drive" || departing}
+            onUnavailable={
+              view === "drive" || departing ? sceneFailed : finishOpening
+            }
           />
         </Suspense>
       </div>
-      {!hasDriven && (
+      {!introDismissed && (
         <div className="opening-signature" aria-hidden="true">
           <span>PARKSIDE</span>
           <small>A PHYSICAL AI EXPERIMENT</small>
@@ -419,6 +471,18 @@ export default function App() {
       >
         조작 영역으로 바로가기
       </a>
+      {opening && (
+        <aside className="opening-caption" aria-label="기준 제어기 주차 시연">
+          <span className="opening-eyebrow">
+            <i /> BASELINE / AUTOPARK
+          </span>
+          <strong>One smooth move.</strong>
+          <p>기준 제어기 주차 기록 · 2배속 재생 · 학습 AI 아님</p>
+          <button onClick={finishOpening}>
+            오프닝 건너뛰기 <ArrowUpRight size={14} />
+          </button>
+        </aside>
+      )}
       {view === "landing" ? (
         <>
           <header className="site-header">
@@ -437,35 +501,167 @@ export default function App() {
             </span>
           </header>
           <main>
-            <section className="hero" aria-labelledby="hero-title">
-              <div className="hero-topline">
-                <span>THE PARKING PLAYGROUND</span>
-                <span>
-                  작은 공간, 무한한 시도. <MoveUpRight size={14} />
-                </span>
-              </div>
-              <div className="hero-copy">
-                <div className="edition-label">
-                  <span className="outline-label">
-                    A PHYSICAL AI DRIVING EXPERIENCE
+            <div className="story-scroll">
+              <section
+                className="hero"
+                aria-label="주차 공간과 센서 이야기"
+                data-chapter={chapter}
+                data-film-progress={storyProgress.toFixed(4)}
+              >
+                <div className="story-watermark" aria-hidden="true">
+                  {storyChapters[chapter].label}
+                </div>
+                <div className="story-frame" aria-hidden="true">
+                  <span>LOCAL SIMULATION / 01</span>
+                  <span>COMPACT · 4.4 M</span>
+                </div>
+                <div className="hero-topline">
+                  <span>THE PARKING PLAYGROUND</span>
+                  <span>
+                    작은 공간, 무한한 시도. <MoveUpRight size={14} />
                   </span>
                 </div>
-                <h1 id="hero-title" aria-label="주차를 플레이하다.">
-                  <span>Every move.</span>
-                  <span className="outline-type">
-                    A possibility<span className="title-dot">.</span>
-                  </span>
-                </h1>
-                <div className="hero-description">
-                  <h2>작은 움직임이, 새로운 가능성으로.</h2>
-                  <p>
-                    직접 운전하고. 공간을 감각하고.
+                <div
+                  className="hero-copy"
+                  inert={chapter !== 0 || opening}
+                  aria-hidden={chapter !== 0 || opening}
+                >
+                  <div className="edition-label">
+                    <span className="outline-label">
+                      A PHYSICAL AI DRIVING EXPERIENCE
+                    </span>
+                  </div>
+                  <h1 id="hero-title" aria-label="주차를 플레이하다.">
+                    <span>{storyChapters[0].title}</span>
+                    <span className="outline-type">
+                      {storyChapters[0].subtitle}
+                    </span>
+                  </h1>
+                  <div className="hero-description">
+                    <h2>작은 움직임이, 새로운 가능성으로.</h2>
+                    <p>
+                      직접 운전하고. 공간을 감각하고.
+                      <br />
+                      같은 주차장에서 다른 시도를 발견하세요.
+                    </p>
+                  </div>
+                </div>
+                <div
+                  className="story-copy space-copy"
+                  inert={chapter !== 1}
+                  aria-hidden={chapter !== 1}
+                >
+                  <span className="story-kicker">02 / THE SPACE BETWEEN</span>
+                  <h2>
+                    {storyChapters[1].title}
                     <br />
-                    같은 주차장에서 다른 시도를 발견하세요.
+                    <em>{storyChapters[1].subtitle}</em>
+                  </h2>
+                  <p>
+                    {storyChapters[1].description}
+                    <br />옆 차량, 기둥, 한 칸의 여유.
+                    <br />
+                    당신이 선택한 환경에서 다시 시작하세요.
                   </p>
+                  <div className="story-facts">
+                    <span>
+                      <b>
+                        {(
+                          driving.scenario.vehicle.wheelbaseM +
+                          driving.scenario.vehicle.frontOverhangM +
+                          driving.scenario.vehicle.rearOverhangM
+                        ).toFixed(1)}
+                      </b>{" "}
+                      m · 차량 길이
+                    </span>
+                    <span>
+                      <b>{driving.scenario.vehicle.widthM.toFixed(1)}</b> m ·
+                      차량 폭
+                    </span>
+                  </div>
+                </div>
+                <div
+                  className="story-copy sense-copy"
+                  inert={chapter !== 2}
+                  aria-hidden={chapter !== 2}
+                >
+                  <span className="story-kicker">
+                    03 / A DIFFERENT WAY TO SEE
+                  </span>
+                  <h2>
+                    {storyChapters[2].title}
+                    <br />
+                    <em>{storyChapters[2].subtitle}</em>
+                  </h2>
+                  <p>
+                    {storyChapters[2].description}
+                    <br />
+                    장애물까지의 거리를 기하로 계산합니다.
+                    <br />
+                    운전을 시작하면 움직임에 맞춰 다시 계산됩니다.
+                  </p>
+                  <div className="story-facts">
+                    <span>
+                      <b>{driving.scenario.sensor.rayCount}</b> 가상 광선
+                    </span>
+                    <span>
+                      <b>{driving.scenario.sensor.maxRangeM}</b> m · 최대 범위
+                    </span>
+                  </div>
+                </div>
+                {chapter === 2 && (
+                  <aside
+                    className="story-sensor-proof"
+                    aria-label="초기 센서 측정값"
+                  >
+                    <span>
+                      <Radar size={14} /> SENSOR SNAPSHOT
+                    </span>
+                    <strong>
+                      {storySensor.rawMinimum === null
+                        ? "미검출"
+                        : storySensor.rawMinimum.toFixed(2) + " m"}
+                    </strong>
+                    <p>현재 배치의 중심 센서 원시 최소 거리</p>
+                    <small>무잡음 가상 센서 · 실차 안전 기준 아님</small>
+                  </aside>
+                )}
+                <div className="hero-visual">
+                  <div className="orbit-lettering" aria-hidden="true">
+                    LET’S TAKE A LITTLE TURN ↗
+                  </div>
+                  <button
+                    className="floating-sensor"
+                    aria-pressed={sensors}
+                    onClick={() => setSensors(!sensors)}
+                  >
+                    <Radar size={23} />
+                    <span>
+                      SENSOR VISION
+                      <small>센서 시야 {sensors ? "ON" : "OFF"} ↗</small>
+                    </span>
+                  </button>
+                  <span className="scene-hint">
+                    <span /> DRAG TO EXPLORE
+                  </span>
+                  <div className="parking-stamp" aria-hidden="true">
+                    <span>P</span>
+                    <small>
+                      NO PRESSURE.
+                      <br />
+                      JUST PARK.
+                    </small>
+                  </div>
                 </div>
                 <div className="hero-actions">
-                  <button className="button orange" onClick={start}>
+                  <button
+                    className="button orange"
+                    disabled={state === "loading"}
+                    onClick={() => {
+                      if (chapter === 2) setSensors(true);
+                      void start();
+                    }}
+                  >
                     바로 운전하기 <ArrowUpRight size={21} />
                   </button>
                   <a className="text-link" href="#garage">
@@ -473,53 +669,61 @@ export default function App() {
                   </a>
                 </div>
                 <p className="hero-footnote">
-                  설치 없음 · 키보드 & 터치 · 실제 가상 센서
+                  하나의 주차장. 보는 순간에서, 운전하는 순간으로.
                 </p>
-              </div>
-              <div className="hero-visual">
-                <div className="orbit-lettering" aria-hidden="true">
-                  LET’S TAKE A LITTLE TURN ↗
+                <div className="story-chapters" aria-label="자동 재생 장면">
+                  {storyChapters.map((item, index) => (
+                    <span
+                      className="film-chapter"
+                      key={item.label}
+                      aria-current={chapter === index ? "step" : undefined}
+                    >
+                      <span>0{index + 1}</span>
+                      {item.label}
+                      <i
+                        style={{
+                          transform: `scaleX(${Math.max(0, Math.min(1, storyProgress * 3 - index))})`,
+                        }}
+                      />
+                    </span>
+                  ))}
+                  <a href="#garage">
+                    공간 둘러보기 <ArrowDown size={14} />
+                  </a>
                 </div>
-                <button
-                  className="floating-sensor"
-                  aria-pressed={sensors}
-                  onClick={() => setSensors(!sensors)}
-                >
-                  <Radar size={23} />
+                <div className="hero-bottom">
                   <span>
-                    SENSOR VISION
-                    <small>센서 시야 {sensors ? "ON" : "OFF"} ↗</small>
+                    <span className="dot orange-dot" /> 현재 실행 가능한 주차
+                    실험
                   </span>
-                </button>
-                <span className="scene-hint">
-                  <span /> DRAG TO EXPLORE
-                </span>
-                <div className="parking-stamp" aria-hidden="true">
-                  <span>P</span>
-                  <small>
-                    NO PRESSURE.
-                    <br />
-                    JUST PARK.
-                  </small>
+                  <span>직접 운전 / 가상 거리 센서 / 로컬 결과</span>
+                  <button
+                    className="motion-toggle"
+                    aria-pressed={motionPaused}
+                    onClick={() => setMotionPaused(!motionPaused)}
+                  >
+                    장식 모션 {motionPaused ? "켜기" : "멈추기"}
+                  </button>
+                  <a href="#garage" aria-label="차고로 이동">
+                    <ArrowDown size={19} />
+                  </a>
                 </div>
-              </div>
-              <div className="hero-bottom">
-                <span>
-                  <span className="dot orange-dot" /> 현재 실행 가능한 주차 실험
-                </span>
-                <span>직접 운전 / 가상 거리 센서 / 로컬 결과</span>
-                <button
-                  className="motion-toggle"
-                  aria-pressed={motionPaused}
-                  onClick={() => setMotionPaused(!motionPaused)}
-                >
-                  장식 모션 {motionPaused ? "켜기" : "멈추기"}
-                </button>
-                <a href="#garage" aria-label="차고로 이동">
-                  <ArrowDown size={19} />
-                </a>
-              </div>
-            </section>
+              </section>
+            </div>
+            {staticStory && (
+              <section className="story-static" aria-label="공간과 센서 소개">
+                {storyChapters.slice(1).map((item) => (
+                  <article key={item.label}>
+                    <span className="eyebrow">{item.label}</span>
+                    <h2>
+                      {item.title} {item.subtitle}
+                    </h2>
+                    <p>{item.description}</p>
+                  </article>
+                ))}
+                <p>개발용 차량 · 무잡음 가상 거리 센서 · 학습 정책 연결 예정</p>
+              </section>
+            )}
             <div className="play-ribbon" aria-hidden="true">
               <span>LESS PRESSURE</span>
               <b>✳</b>
@@ -1076,8 +1280,16 @@ export default function App() {
               </span>
             </div>
             <div className="pedals">
-              {pedal("brake", "브레이크", "S")}
-              {pedal("throttle", "액셀", "W")}
+              {pedal(
+                "brake",
+                "브레이크",
+                driving.gear === "R" ? "↑ / S" : "↓ / S",
+              )}
+              {pedal(
+                "throttle",
+                "액셀",
+                driving.gear === "R" ? "↓ / W" : "↑ / W",
+              )}
             </div>
             <div className="run-controls">
               <button
@@ -1108,7 +1320,7 @@ export default function App() {
             <div className="cockpit-status">
               <span role="status">
                 {driving.message ||
-                  "E 전진 · Q 후진 → W 액셀 / S 브레이크 / A·D 또는 드래그 조향"}
+                  "D: ↑ 전진 · R: ↓ 후진 · 반대 방향키 제동 / W 액셀 · S 브레이크"}
               </span>
               <span>
                 {sensors
@@ -1163,10 +1375,11 @@ export default function App() {
                 <li>
                   <b>02</b>
                   <div>
-                    <strong>W는 액셀, S는 브레이크.</strong>
+                    <strong>D에서는 ↑ 전진, R에서는 ↓ 후진.</strong>
                     <p>
-                      S는 후진이 아니에요. 후진하려면 R을 선택한 뒤 액셀을
-                      누르세요. 페달을 놓으면 서서히 감속해요.
+                      기어와 반대 방향키는 브레이크예요. W는 기어에 관계없이
+                      액셀, S는 항상 브레이크예요. 방향키로 기어가 자동
+                      변경되지는 않아요.
                     </p>
                   </div>
                 </li>

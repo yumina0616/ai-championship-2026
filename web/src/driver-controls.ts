@@ -3,6 +3,22 @@ import type { Command, VehicleSpec } from "../../engine/src/index";
 export type Gear = "P" | "R" | "D";
 export type DriverInput = "throttle" | "brake" | "left" | "right";
 export const STOP_SPEED = 0.001;
+export function keyInput(code: string, gear: Gear): DriverInput | null {
+  if (code === "ArrowUp") return gear === "R" ? "brake" : "throttle";
+  if (code === "ArrowDown") return gear === "R" ? "throttle" : "brake";
+  return (
+    (
+      {
+        KeyW: "throttle",
+        KeyS: "brake",
+        KeyA: "left",
+        ArrowLeft: "left",
+        KeyD: "right",
+        ArrowRight: "right",
+      } as Record<string, DriverInput>
+    )[code] ?? null
+  );
+}
 export function canShift(speedMps: number) {
   return Number.isFinite(speedMps) && Math.abs(speedMps) <= STOP_SPEED;
 }

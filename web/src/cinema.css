@@ -15,14 +15,12 @@
   background: #101317;
 }
 .world-stage {
-  position: absolute;
+  position: fixed;
   left: 0;
   width: 100%;
   z-index: 0;
   overflow: hidden;
-  transition:
-    top 1.2s var(--ease),
-    height 1.2s var(--ease);
+  transition: none;
 }
 .world-stage .scene-canvas {
   width: 100%;
@@ -235,6 +233,108 @@
 .cinema .text-link {
   color: #cbd3d7;
   border-color: #7a858c;
+}
+.cinema .pedals .input-button kbd {
+  white-space: nowrap;
+  padding: 2px 3px;
+  color: #d5e3dd;
+  border-color: #81988d;
+}
+.opening-caption {
+  position: absolute;
+  top: 53vh;
+  left: 6%;
+  z-index: 5;
+  color: #f1f4f2;
+  pointer-events: none;
+  animation: opening-caption-in 700ms 1s both;
+}
+.opening-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font:
+    10px ui-monospace,
+    monospace;
+  letter-spacing: 2px;
+}
+.opening-eyebrow i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #bce6d9;
+  box-shadow: 0 0 14px #bce6d980;
+}
+.opening-caption strong {
+  display: block;
+  font-size: clamp(28px, 4.5vw, 66px);
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  margin: 13px 0 9px;
+}
+.opening-caption p {
+  color: #c2cbce;
+  font-size: 11px;
+}
+.opening-caption button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  border: 0;
+  background: none;
+  color: #e2e9e7;
+  font-size: 11px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.cinema.opening-drive .story-watermark,
+.cinema.opening-drive .story-chapters,
+.cinema.opening-drive .hero-topline,
+.cinema.opening-drive .floating-sensor {
+  opacity: 0;
+  pointer-events: none;
+}
+.cinema.opening-drive .hero::before {
+  opacity: 0.4;
+}
+.cinema.opening-handoff .world-stage {
+  animation: opening-handoff 800ms ease-out both;
+}
+@keyframes opening-handoff {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes opening-caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 600px) {
+  .opening-caption {
+    top: 48vh;
+    left: 6%;
+  }
+  .opening-caption p {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opening-caption {
+    display: none;
+  }
+  .cinema.opening-handoff .world-stage {
+    animation: none;
+  }
 }
 .opening-signature {
   position: fixed;
@@ -713,4 +813,467 @@
 }
 .cinema.motion-paused .world-stage {
   transition: none;
+}
+
+/* 자동 재생 카메라. 페이지 스크롤/마우스는 촬영 경로에 영향을 주지 않습니다. */
+.cinema.landing .world-stage {
+  transition: none;
+}
+.cinema.landing .world-stage canvas {
+  touch-action: pan-y !important;
+}
+.story-scroll {
+  position: relative;
+  height: auto;
+}
+.cinema .story-scroll .hero {
+  position: relative;
+}
+.story-frame {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 121px;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  color: #8796a1;
+  font:
+    9px ui-monospace,
+    monospace;
+  letter-spacing: 2px;
+}
+.story-watermark {
+  position: absolute;
+  top: 15%;
+  right: 4%;
+  z-index: 1;
+  font:
+    400 clamp(90px, 19vw, 320px) / 1 Arial,
+    sans-serif;
+  letter-spacing: -0.075em;
+  color: transparent;
+  -webkit-text-stroke: 1px #d2dce515;
+  user-select: none;
+}
+.cinema .hero-copy,
+.story-copy {
+  transition:
+    opacity 300ms ease,
+    transform 500ms var(--ease),
+    visibility 300ms;
+}
+.cinema .hero-copy[aria-hidden="true"],
+.story-copy[aria-hidden="true"] {
+  opacity: 0;
+  transform: translateY(22px);
+  visibility: hidden;
+  pointer-events: none;
+  transition-duration: 100ms;
+}
+.cinema .hero-copy[aria-hidden="false"],
+.story-copy[aria-hidden="false"] {
+  transition-delay: 100ms;
+}
+.story-copy {
+  position: absolute;
+  left: 6%;
+  bottom: 22%;
+  z-index: 2;
+  max-width: 80%;
+  pointer-events: auto;
+}
+.story-kicker {
+  display: block;
+  margin-bottom: 26px;
+  font:
+    10px ui-monospace,
+    monospace;
+  letter-spacing: 2px;
+  color: #b1c0c8;
+}
+.cinema .story-copy h2 {
+  margin: 0;
+  font:
+    400 clamp(48px, 6.6vw, 104px) / 1.04 "Helvetica Neue",
+    Arial,
+    sans-serif;
+  letter-spacing: -0.055em;
+  color: #f5f5f0;
+}
+.story-copy h2 em {
+  font-style: normal;
+  color: #aebbbd;
+}
+.story-copy > p {
+  margin: 25px 0;
+  font-size: 13px;
+  line-height: 1.9;
+  color: #acbac3;
+}
+.story-facts {
+  display: flex;
+  gap: 38px;
+  color: #96a6af;
+  font-size: 10px;
+}
+.story-facts b {
+  color: #e4ece9;
+  font-size: 29px;
+  font-weight: 400;
+  margin-right: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.story-action {
+  margin-top: 26px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 13px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #c3d1ce;
+  color: #e4ece9;
+  font-size: 13px;
+  cursor: pointer;
+}
+.story-action:hover {
+  color: white;
+  border-color: white;
+}
+.story-chapters {
+  position: absolute;
+  z-index: 3;
+  left: 6%;
+  right: 6%;
+  bottom: 85px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  pointer-events: auto;
+}
+.story-chapters .film-chapter {
+  position: relative;
+  padding: 14px 0;
+  min-width: 112px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #8797a14d;
+  color: #80929f;
+  font:
+    10px ui-monospace,
+    monospace;
+  letter-spacing: 1.8px;
+  text-align: left;
+}
+.story-chapters .film-chapter > span {
+  margin-right: 14px;
+  opacity: 0.6;
+}
+.story-chapters .film-chapter[aria-current] {
+  color: #edf4ef;
+}
+.story-chapters .film-chapter i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: #d0e1d8;
+  transform-origin: left;
+}
+.story-chapters > a {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 10px;
+  color: #b4c1c8;
+}
+.cinema .floating-sensor {
+  bottom: 155px;
+}
+.cinema .hero[data-chapter="2"] .floating-sensor {
+  display: none;
+}
+.story-sensor-proof {
+  position: absolute;
+  right: 6%;
+  bottom: 155px;
+  z-index: 2;
+  width: 260px;
+  padding: 20px 0 16px 20px;
+  border-left: 1px solid #beddd37a;
+  background: linear-gradient(90deg, #121c24a8, transparent);
+  color: #a6b8bf;
+}
+.story-sensor-proof > span {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font:
+    9px ui-monospace,
+    monospace;
+  letter-spacing: 2px;
+}
+.story-sensor-proof strong {
+  display: block;
+  margin: 15px 0 10px;
+  color: #d6ede2;
+  font-size: 44px;
+  line-height: 1;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+}
+.story-sensor-proof p {
+  font-size: 10px;
+  margin: 0 0 6px;
+}
+.story-sensor-proof small {
+  font-size: 9px;
+  color: #8da1aa;
+}
+.cinema.static-story .story-scroll {
+  height: auto;
+  min-height: 0;
+}
+.cinema.static-story .story-scroll .hero {
+  position: relative;
+}
+.static-story .story-chapters {
+  display: none;
+}
+.story-static {
+  position: relative;
+  background: #101317;
+  padding: 60px 6%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 35px;
+  border-bottom: 1px solid #363d43;
+}
+.story-static h2 {
+  font-weight: 400;
+  font-size: 28px;
+}
+.story-static p {
+  color: #aab8c0;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.story-static > p {
+  grid-column: 1/-1;
+}
+@media (max-width: 800px) {
+  .story-frame {
+    top: 95px;
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .story-watermark {
+    top: 19%;
+    font-size: 26vw;
+  }
+  .story-copy {
+    bottom: max(29.5%, 250px);
+    max-width: 89%;
+  }
+  .cinema .story-copy h2 {
+    font-size: clamp(39px, 8.8vw, 67px);
+  }
+  .story-kicker {
+    font-size: 8px;
+    margin-bottom: 18px;
+  }
+  .story-copy > p {
+    font-size: 11px;
+    margin: 20px 0;
+  }
+  .story-facts {
+    gap: 25px;
+  }
+  .story-facts b {
+    font-size: 24px;
+  }
+  .story-action {
+    margin-top: 15px;
+    font-size: 12px;
+  }
+  .story-chapters {
+    bottom: 73px;
+    gap: 14px;
+  }
+  .story-chapters .film-chapter {
+    flex: 1;
+    min-width: 0;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  .story-chapters .film-chapter > span {
+    margin-right: 7px;
+  }
+  .story-chapters > a {
+    position: absolute;
+    right: 0;
+    bottom: 53px;
+    font-size: 9px;
+  }
+  .cinema .floating-sensor {
+    bottom: 125px;
+    right: auto;
+    left: 6%;
+    padding: 8px 10px;
+  }
+  .story-sensor-proof {
+    bottom: 127px;
+    right: auto;
+    left: 6%;
+    width: 235px;
+    padding: 8px 0 8px 12px;
+  }
+  .story-sensor-proof strong {
+    font-size: 26px;
+    margin: 7px 0;
+  }
+  .story-sensor-proof > span {
+    font-size: 8px;
+  }
+  .story-sensor-proof p {
+    font-size: 9px;
+  }
+  .story-sensor-proof small {
+    font-size: 8px;
+  }
+  .story-static {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cinema .hero-copy,
+.cinema .story-copy {
+  bottom: 33%;
+}
+.cinema .hero-actions {
+  position: absolute;
+  left: 6%;
+  bottom: 155px;
+  z-index: 3;
+  margin: 0;
+  pointer-events: auto;
+}
+.cinema .hero-footnote {
+  position: absolute;
+  left: 6%;
+  bottom: 126px;
+  z-index: 2;
+  margin: 0;
+}
+/* 모션 재개 시 최초 로드용 지연 애니메이션을 다시 실행하지 않습니다. */
+.cinema .hero h1 > span,
+.cinema .hero-description,
+.cinema .edition-label,
+.cinema .hero-actions,
+.cinema .floating-sensor {
+  animation: none;
+}
+.cinema .hero-copy[aria-hidden="false"],
+.cinema .story-copy[aria-hidden="false"] {
+  transition:
+    opacity 800ms 180ms ease,
+    transform 1.2s var(--ease);
+}
+.cinema .hero-copy[aria-hidden="true"],
+.cinema .story-copy[aria-hidden="true"] {
+  transition-duration: 250ms;
+}
+.cinema .hero-watermark {
+  transition: opacity 1s;
+}
+.cinema .hero::before,
+.cinema .site-header,
+.cinema .hero-actions,
+.cinema .hero-footnote,
+.cinema .story-chapters,
+.cinema .hero-bottom,
+.cinema .story-sensor-proof,
+.cinema .floating-sensor,
+.cinema .story-frame,
+.cinema .story-watermark {
+  transition: opacity 320ms ease;
+}
+.cinema.departing .hero-copy,
+.cinema.departing .story-copy,
+.cinema.departing .hero::before,
+.cinema.departing .site-header,
+.cinema.departing .hero-actions,
+.cinema.departing .hero-footnote,
+.cinema.departing .story-chapters,
+.cinema.departing .hero-bottom,
+.cinema.departing .story-sensor-proof,
+.cinema.departing .floating-sensor,
+.cinema.departing .story-frame,
+.cinema.departing .story-watermark {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 280ms ease;
+}
+.cinema.entering .drive-header,
+.cinema.entering .stage-caption {
+  opacity: 0;
+  pointer-events: none;
+}
+.cinema .drive-header,
+.cinema .stage-caption {
+  transition: opacity 600ms ease;
+}
+.cinema .cockpit {
+  animation-duration: 650ms;
+}
+.cinema .entry-overlay .notice-panel {
+  background: none;
+  padding: 0;
+  border: 0;
+}
+.cinema .entry-overlay .eyebrow {
+  color: #aabfc8;
+  letter-spacing: 3px;
+}
+.cinema .entry-overlay h2 {
+  font-size: 15px;
+  font-weight: 400;
+}
+.cinema .entry-overlay p {
+  font-size: 11px;
+}
+.cinema .entry-overlay .text-link {
+  font-size: 10px;
+}
+@media (max-width: 800px) {
+  .cinema .hero-copy,
+  .cinema .story-copy {
+    bottom: 33%;
+  }
+  .cinema .story-sensor-proof {
+    top: 130px;
+    right: 6%;
+    left: auto;
+    bottom: auto;
+    width: 190px;
+  }
+  .cinema .floating-sensor {
+    top: 130px;
+    right: 6%;
+    left: auto;
+    bottom: auto;
+  }
+  .cinema .hero-actions {
+    bottom: 153px;
+  }
+  .cinema .hero-footnote {
+    bottom: 126px;
+  }
+  .cinema .story-chapters > a {
+    position: static;
+    font-size: 0;
+  }
 }
