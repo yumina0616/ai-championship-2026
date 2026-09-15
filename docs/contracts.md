@@ -79,6 +79,16 @@ interface EngineError {
 
 ## Episode
 
+### 웹 수동 입력 어댑터 (#8)
+
+구현된 엔진에는 읽기 전용 `getParkingStatus(): ParkingStatus | null`을 추가했습니다. 충돌·차체 포함·위치/각도 오차·정지 여부와 `ready`, `heldForS`, `requiredHoldS`를 평가와 같은 조건에서 계산합니다. reset 전 null이며 호출은 시간을 진행하거나 hold 타이머를 변경하지 않습니다. `ready`는 성공 확정이 아닙니다. 성공 결과는 기존 `step().outcome`으로만 판단합니다. UI 진단용 truth를 정책 `Observation`이나 Episode wire 타입에 추가하지 않습니다.
+
+웹 연습 Scenario는 `parkside-<template>-v2`로 구분합니다. 칸 5.4×2.8m와 위치 오차 0.6m는 웹 프리셋 값이며 기존 fixture/학습 기준은 변경하지 않습니다. 세부 치수·P 마무리·호환성은 [웹 주차 판정 안내](../web/README.md#주차-판정과-웹-연습-프리셋-v2)를 따릅니다. 향후 기록 비교에서는 v1/v2와 성공 기준이 다른 Scenario를 섞지 않습니다.
+
+웹의 P/R/D·액셀·브레이크·조향 입력은 기존 `Command`의 signed speed/steering으로 변환합니다. 엔진의 모델/정책 API에 기어 필드를 추가하지 않습니다. 정지 변속·브레이크 우선·페달/조향 변화와 단순화 가정은 [웹 개발 안내](../web/README.md)의 수동 조작 절에 있습니다. UI의 성공 후 P 확인은 엔진의 성공 평가와 별개입니다. #10 기록에서 원시 입력과 command를 구별하고 P 확인을 정책 평가 성공 조건으로 오인하지 마세요.
+
+### 기록 구조
+
 Header 제안: episode_id, schema_version, scenario_snapshot, scenario_version, engine_version, vehicle/sensor/evaluator version, seed, controller_kind, policy_version 또는 null, 시작 시각, consent 상태/버전, view_mode, assistance flags.
 
 Step 제안: step_index, sim_time_s, observation_t, requested_action_t, applied_command_t, next_state_truth, next_outcome, wall_timestamp. truth는 정책 학습 입력 생성 단계에서 명시적으로 제거한다.

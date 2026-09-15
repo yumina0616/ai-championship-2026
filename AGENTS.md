@@ -47,7 +47,7 @@ python3 -m unittest discover -s tests -v
 git diff --check
 ```
 
-현재는 문서 검사만 있습니다. 기능 추가 PR은 해당 스택의 빌드·타입 검사·기능 테스트를 실제 추가하고 CI와 개발 규칙을 갱신해야 합니다. 위 명령 통과를 서비스 테스트 통과로 설명하지 않습니다.
+엔진/웹 변경에는 추가로 Node.js 22.12 이상에서 `npm --prefix engine ci`, `npm --prefix engine run typecheck`, `npm --prefix engine test`, `npm --prefix web ci`, `npm --prefix web run build`를 실행합니다. 브라우저 검사는 [웹 개발 안내](web/README.md)의 Playwright 명령을 따릅니다. 위 문서 검사 통과만을 서비스 테스트 통과로 설명하지 않습니다.
 
 계약·동작이 바뀌면 코드·테스트·예시·문서를 같은 PR에서 갱신합니다. 구현 결과·실행한 검사·남은 한계를 한국어로 보고합니다.
 

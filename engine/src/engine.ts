@@ -17,6 +17,7 @@ import {
   type Pose,
   type Scenario,
   type StepResult,
+  type ParkingStatus,
 } from "./types.js";
 
 export const FIXED_DT_S = 0.05;
@@ -122,15 +123,13 @@ export class ParkingEngine {
 
   private evaluateOutcome(scenario: Scenario): Outcome {
     // 충돌을 먼저 검사한다 — docs/contracts.md "같은 tick에 충돌+성공 동시 발생 시 충돌 우선".
-    const collided =
-      footprintCollides(this.pose, scenario.vehicle, scenario.obstacles) ||
-      footprintOutOfBounds(this.pose, scenario.vehicle, scenario.bounds);
-    if (collided) {
+    const status = this.getParkingStatus()!;
+    if (status.collision) {
       this.successHoldStartSimTimeS = null;
       return { terminated: true, reason: "collision" };
     }
 
-    if (this.isSuccessConditionMetNow(scenario)) {
+    if (status.ready) {
       if (this.successHoldStartSimTimeS === null) {
         this.successHoldStartSimTimeS = this.simTimeS;
       }
@@ -149,27 +148,30 @@ export class ParkingEngine {
     return { terminated: false, reason: null };
   }
 
-  /** 목표 공간 포함 + 위치/각도 오차 + 정지 속도 — hold_time_s는 evaluateOutcome이 별도로 누적한다. */
-  private isSuccessConditionMetNow(scenario: Scenario): boolean {
+  /** 엔진 판정과 화면이 같은 조건/시뮬레이션 타이머를 읽는다. 호출은 시간을 진행시키지 않는다. */
+  getParkingStatus(): ParkingStatus | null {
+    const scenario = this.scenario;
+    if (!scenario) return null;
     const criteria = scenario.successCriteria;
-    if (
-      criteria.requireFootprintInsideGoal &&
-      !footprintFullyInsideGoal(this.pose, scenario.vehicle, scenario.goalSpace)
-    ) {
-      return false;
-    }
+    const collision = footprintCollides(this.pose, scenario.vehicle, scenario.obstacles) ||
+      footprintOutOfBounds(this.pose, scenario.vehicle, scenario.bounds);
+    const inside = !criteria.requireFootprintInsideGoal ||
+      footprintFullyInsideGoal(this.pose, scenario.vehicle, scenario.goalSpace);
     const positionErrorM = Math.hypot(
       this.pose.xM - scenario.goalPose.xM,
       this.pose.yM - scenario.goalPose.yM
     );
-    if (positionErrorM > criteria.positionToleranceM) return false;
-
     const yawErrorRad = Math.abs(normalizeAngle(this.pose.yawRad - scenario.goalPose.yawRad));
-    if (yawErrorRad > criteria.yawToleranceRad) return false;
-
-    if (Math.abs(this.lastAppliedCommand.targetSpeedMps) > criteria.stoppedSpeedMps) return false;
-
-    return true;
+    const positionOk = positionErrorM <= criteria.positionToleranceM;
+    const angleOk = yawErrorRad <= criteria.yawToleranceRad;
+    const stopped = Math.abs(this.lastAppliedCommand.targetSpeedMps) <= criteria.stoppedSpeedMps;
+    const ready = !collision && inside && positionOk && angleOk && stopped;
+    return {
+      collision, inside, positionErrorM, yawErrorRad, positionOk, angleOk, stopped, ready,
+      heldForS: ready && this.successHoldStartSimTimeS !== null
+        ? Math.min(criteria.holdTimeS, this.simTimeS - this.successHoldStartSimTimeS) : 0,
+      requiredHoldS: criteria.holdTimeS,
+    };
   }
 }
 

@@ -1,6 +1,6 @@
 # engine — 저속 차량 제어·충돌·센서·기준 제어기 (Issue #5, #7, #9)
 
-`docs/contracts.md`의 "엔진 인터페이스"를 구현한 TypeScript 모듈. 웹 UI(React, #4/#6/#8)와 독립적이며, 아직 어디에도 import되지 않은 순수 로직 패키지다.
+`docs/contracts.md`의 "엔진 인터페이스"를 구현한 TypeScript 모듈. React에 의존하지 않는 순수 로직 패키지이며 `web/src/driving.ts`에서 import하여 실제 수동 주행에 사용한다. 기준 제어기는 아직 웹 관전 모드에 연결하지 않았다.
 
 ## 범위
 
@@ -25,6 +25,7 @@ npm run typecheck # tsc --noEmit
 - 센서 노이즈는 `Math.random()`이 아니라 `scenario.seed` 기반 결정론적 PRNG(`src/rng.ts`, mulberry32)를 쓴다 — #5에서 약속한 "동일 engine·seed·command 재실행은 완전히 같은 결과"를 센서까지 확장 유지한다.
 - 센서 갱신주기(`sensor.periodS`)가 물리 dt보다 길면 그 사이 step에서는 이전 값을 그대로 돌려준다(`docs/contracts.md`: "관측 시간과 step이 제어 기록에 정렬"). `RangeReading.updatedSimTimeS`로 실제 갱신 시각을 알 수 있다.
 - 성공 판정은 "목표 공간에 footprint 완전 포함 + 위치/각도 오차 + 정지 속도"가 `hold_time_s` 동안 **연속으로** 유지돼야 확정된다. `evaluateOutcome()`은 충돌을 먼저 검사하므로 같은 step에 충돌·성공 조건이 겹치면 항상 충돌이 이긴다(`test/success.test.ts`).
+- `getParkingStatus()`는 같은 판정 조건과 실제 정지 유지 시간을 읽는 UI 진단용 함수다. reset 전에는 null이며 반복 호출은 시간/상태를 바꾸지 않는다. `ready`는 즉시 조건 충족이지 성공 확정이 아니다. `Observation`/`StepResult`와 정책 입력은 변경하지 않았다. 웹 v2의 연습칸/허용 오차 변경은 웹 Scenario에만 적용되며 기존 학습 fixture와 엔진 평가 의미는 유지한다.
 - `src/baselineController.ts`(`runBaselineRollout()`)는 목표점을 향한 순수추종(pure pursuit)을 "항상 후진" 전제로 적용한 가장 단순한 반응형 제어기다. 장애물 회피가 없어서 `reverse-bay.v1.json`(주차된 옆 차량 2대+기둥)에서는 58 step 만에 충돌한다(`test/rollout.test.ts`에 그대로 남겨둠) — 장애물 없는 단순 오프셋에서만 쓸모 있는 참고용으로 남겨뒀다.
 - `src/hybridAStar.ts`(`runHybridAStarRollout()`)가 실제 학습 데이터 생성에 쓰는 **장애물 회피 경로계획기**다. 격자 A*가 아니라 "실제 차량이 낼 수 있는 움직임(조향각 5종 × 전진/후진 = 10개 motion primitive)"으로 상태공간을 탐색한다. 원래 Hybrid A*는 보통 Reeds-Shepp 곡선도 같이 쓰지만, 이 구현은 유클리드 거리 휴리스틱만 쓰는 축소판이다(정직하게 명시 — 일정상 "장애물을 실제로 피해서 도착하는" 것 자체를 우선했다).
   - **핵심 정합성 포인트**: 계획 단계도 `clampCommand`(가속/조향 변화율 제한)를 매 substep마다 실제 engine과 똑같이 적용한다. 처음엔 이걸 안 했다가 "계획에서는 안 부딪히는데 실제 engine.step()으로 재생하면 부딪히는" 문제를 실제로 겪었다 — 계획이 "순간적으로 목표 속도에 도달한다"고 가정하면 실제로는 느리게 가속하는 동안 궤적이 달라져서 생기는 문제였다.

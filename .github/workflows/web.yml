@@ -1,0 +1,42 @@
+name: 웹·엔진 검증
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            engine/package-lock.json
+      - run: npm ci
+        working-directory: engine
+      - run: npm run typecheck && npm test
+        working-directory: engine
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npm test
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-check-results
+          path: web/test-results/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: parking-web-preview
+          path: web/dist/

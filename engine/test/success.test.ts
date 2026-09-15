@@ -48,6 +48,42 @@ function baseScenario(overrides: Partial<Scenario> = {}): Scenario {
 }
 
 describe("ParkingEngine — 성공 판정", () => {
+  it("평가 상태 조회는 시간을 진행하지 않고 실제 hold/reset 상태와 일치한다", () => {
+    const engine = new ParkingEngine();
+    expect(engine.getParkingStatus()).toBeNull();
+    engine.reset(baseScenario({ start: { xM: 3, yM: 0, yawRad: 0 } }));
+    expect(engine.getParkingStatus()).toMatchObject({ ready: true, heldForS: 0 });
+    engine.step({ targetSpeedMps: 0, targetSteeringRad: 0 });
+    engine.step({ targetSpeedMps: 0, targetSteeringRad: 0 });
+    const status = engine.getParkingStatus();
+    expect(status!.heldForS).toBeCloseTo(FIXED_DT_S);
+    for (let i = 0; i < 20; i++) expect(engine.getParkingStatus()).toEqual(status);
+    engine.step({ targetSpeedMps: 1, targetSteeringRad: 0 });
+    expect(engine.getParkingStatus()).toMatchObject({ stopped: false, ready: false, heldForS: 0 });
+    engine.reset(baseScenario());
+    expect(engine.getParkingStatus()).toMatchObject({ inside: false, positionOk: false, heldForS: 0 });
+  });
+
+  it("각도 미충족과 충돌 상태는 화면에서도 성공 준비로 표시되지 않는다", () => {
+    const engine = new ParkingEngine();
+    const s = baseScenario({ start: { xM: 3, yM: 0, yawRad: 0.2 } });
+    s.goalSpace = { ...s.goalSpace, lengthM: 8, widthM: 8 };
+    engine.reset(s);
+    expect(engine.getParkingStatus()).toMatchObject({ inside: true, angleOk: false, ready: false });
+    const collisionScenario = baseScenario({
+      start: { xM: 16.49, yM: 0, yawRad: 0 },
+      goalPose: { xM: 16.49, yM: 0, yawRad: 0 },
+      goalSpace: { centerXM: 17.79, centerYM: 0, lengthM: 10, widthM: 5, yawRad: 0 },
+    });
+    engine.reset(collisionScenario);
+    let outcome;
+    for (let i = 0; i < 10; i++) {
+      outcome = engine.step({ targetSpeedMps: 1, targetSteeringRad: 0 }).outcome;
+      if (outcome.terminated) break;
+    }
+    expect(outcome!.reason).toBe("collision");
+    expect(engine.getParkingStatus()).toMatchObject({ collision: true, ready: false, heldForS: 0 });
+  });
   it("목표 pose에서 정지 상태를 hold_time_s 이상 유지하면 success로 종료된다", () => {
     const engine = new ParkingEngine();
     engine.reset(baseScenario({ start: { xM: 3, yM: 0, yawRad: 0 } })); // 이미 목표 위치에서 시작
