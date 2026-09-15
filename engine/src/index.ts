@@ -18,7 +18,17 @@ export {
 } from "./baselineController.js";
 export {
   runBaselineRollout,
+  runHybridAStarRollout,
   splitScenariosByLayoutGroup,
   type RolloutOptions,
+  type HybridAStarRolloutResult,
   type ScenarioSplit,
 } from "./rollout.js";
+export {
+  planHybridAStar,
+  flattenPrimitiveTargetsToCommands,
+  appendHoldCommands,
+  DEFAULT_HYBRID_ASTAR_OPTIONS,
+  type HybridAStarOptions,
+  type HybridAStarResult,
+} from "./hybridAStar.js";
