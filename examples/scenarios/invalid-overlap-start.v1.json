@@ -1,7 +1,7 @@
 {
   "schema_version": "scenario.v1-draft",
-  "scenario_id": "synthetic-reverse-bay",
-  "description": "계약 논의용 합성 예시. 아직 실행/주차 가능성을 검증하지 않음.",
+  "scenario_id": "synthetic-invalid-overlap-start",
+  "description": "계약 오류 처리 검증용 synthetic 입력. start pose를 obstacle 'parked-car-left' 위에 그대로 겹쳐서 reset()이 EngineError(start_overlap)를 던져야 함을 보인다. 실제 주차장/차종이 아니다.",
   "units": {
     "distance": "m",
     "angle": "rad",
@@ -32,8 +32,8 @@
     "max_steering_rad": 0.55
   },
   "start": {
-    "x_m": 11,
-    "y_m": 8,
+    "x_m": 9.3,
+    "y_m": 0.9,
     "yaw_rad": 0
   },
   "goal": {
@@ -58,24 +58,6 @@
       "center_y_m": 0.9,
       "length_m": 4.4,
       "width_m": 1.8,
-      "yaw_rad": 0
-    },
-    {
-      "id": "parked-car-right",
-      "kind": "rectangle",
-      "center_x_m": 9.3,
-      "center_y_m": 5.1,
-      "length_m": 4.4,
-      "width_m": 1.8,
-      "yaw_rad": 0
-    },
-    {
-      "id": "pillar",
-      "kind": "rectangle",
-      "center_x_m": 14,
-      "center_y_m": 4,
-      "length_m": 0.5,
-      "width_m": 0.5,
       "yaw_rad": 0
     }
   ],
@@ -102,5 +84,10 @@
     "hold_time_s": 1,
     "require_footprint_inside_goal": true,
     "collision_terminates": true
+  },
+  "expected_reset_result": {
+    "ok": false,
+    "error_code": "start_overlap",
+    "reason": "start pose(9.3, 0.9)가 obstacle 'parked-car-left'(center 9.3, 0.9)와 정확히 겹친다. reset()은 observation을 반환하지 않고 EngineError를 던져야 한다."
   }
 }

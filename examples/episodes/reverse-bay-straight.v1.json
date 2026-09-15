@@ -1,0 +1,80 @@
+{
+  "schema_version": "episode.v1-draft",
+  "description": "docs/contracts.md '엔진 인터페이스'/'Episode' 절 예시. reset 1회 + 저속 직진 step 2회의 최소 형태. 수치는 docs/integration-spike.md의 ROS2/Gazebo spike에서 실측 검증한 bicycle model 그대로(speed=+0.8mps, dt=0.05s, 벽까지 초기 5.1m). 실제 사용자 실행 기록이 아니다.",
+  "header": {
+    "episode_id": "ep-synthetic-0001",
+    "scenario_snapshot": {
+      "scenario_id": "synthetic-straight-spike",
+      "vehicle": {
+        "wheelbase_m": 2.6,
+        "front_overhang_m": 0.9,
+        "rear_overhang_m": 0.9,
+        "width_m": 1.8
+      },
+      "start": { "x_m": 0, "y_m": 0, "yaw_rad": 0 },
+      "obstacles": [
+        { "id": "wall", "kind": "rectangle", "center_x_m": 6.5, "center_y_m": 0, "length_m": 0.2, "width_m": 4, "yaw_rad": 0 }
+      ],
+      "sensor": {
+        "id": "front",
+        "pose_vehicle": { "x_m": 1.3, "y_m": 0, "yaw_rad": 0 },
+        "max_range_m": 10
+      }
+    },
+    "scenario_version": "synthetic-straight-spike@1",
+    "engine_version": "browser-kinematic-ts.v1-unreleased",
+    "vehicle_version": "synthetic-compact-v1",
+    "sensor_version": "planar-range-draft@1",
+    "evaluator_version": "pending-#9",
+    "seed": 42,
+    "controller_kind": "human",
+    "policy_version": null,
+    "started_at": "2026-09-15T00:00:00Z",
+    "consent": { "status": "not_requested", "version": null },
+    "view_mode": "top_down_full_map",
+    "assistance_flags": []
+  },
+  "steps": [
+    {
+      "step_index": 0,
+      "sim_time_s": 0.0,
+      "observation_t": {
+        "sensors": [{ "id": "front", "range_m": 5.1, "valid": true, "updated_sim_time_s": 0.0 }],
+        "speed_mps": 0.0,
+        "steering_rad": 0.0,
+        "goal_relative": { "x_m": null, "y_m": null, "yaw_rad": null }
+      },
+      "requested_action_t": { "target_speed_mps": 0.8, "target_steering_rad": 0.0 },
+      "applied_command_t": { "target_speed_mps": 0.8, "target_steering_rad": 0.0 },
+      "next_state_truth": { "x_m": 0.04, "y_m": 0.0, "yaw_rad": 0.0 },
+      "next_outcome": { "terminated": false, "reason": null },
+      "wall_timestamp": "2026-09-15T00:00:00.050Z"
+    },
+    {
+      "step_index": 1,
+      "sim_time_s": 0.05,
+      "observation_t": {
+        "sensors": [{ "id": "front", "range_m": 5.06, "valid": true, "updated_sim_time_s": 0.05 }],
+        "speed_mps": 0.8,
+        "steering_rad": 0.0,
+        "goal_relative": { "x_m": null, "y_m": null, "yaw_rad": null }
+      },
+      "requested_action_t": { "target_speed_mps": 0.8, "target_steering_rad": 0.0 },
+      "applied_command_t": { "target_speed_mps": 0.8, "target_steering_rad": 0.0 },
+      "next_state_truth": { "x_m": 0.08, "y_m": 0.0, "yaw_rad": 0.0 },
+      "next_outcome": { "terminated": false, "reason": null },
+      "wall_timestamp": "2026-09-15T00:00:00.100Z"
+    }
+  ],
+  "footer": {
+    "termination_reason": "incomplete",
+    "total_sim_time_s": 0.1,
+    "distance_traveled_m": 0.08,
+    "direction_changes": 0,
+    "collided": false,
+    "final_position_error_m": null,
+    "final_yaw_error_rad": null,
+    "success": false,
+    "log_complete": false
+  }
+}
