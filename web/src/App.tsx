@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -41,7 +42,7 @@ import SensorAssist, { sensorFeedback } from "./SensorAssist";
 import ParkingFeedback, { parkingMessage } from "./ParkingFeedback";
 import { chapterAt, storyChapters } from "./story";
 import MapEditor from "./MapEditor";
-import type { ParkingMap } from "./maps";
+import { mapScenario, type ParkingMap } from "./maps";
 const ParkingScene = lazy(() => import("./ParkingScene"));
 
 function Logo() {
@@ -144,7 +145,11 @@ export default function App() {
     top: 0,
     height: window.innerHeight,
   });
-  const driving = useDriving(template);
+  const customScenario = useMemo(
+    () => (customMap ? mapScenario(customMap) : undefined),
+    [customMap],
+  );
+  const driving = useDriving(template, customScenario);
   const wheelDrag = useRef<{ id: number; x: number; value: number } | null>(
     null,
   );
@@ -445,6 +450,7 @@ export default function App() {
           <ParkingScene
             key={sceneRevision}
             template={template}
+            customScenario={customScenario}
             result={driving.result}
             motion={driving.motion}
             opening={opening}
@@ -761,21 +767,25 @@ export default function App() {
                 {templates.map((t, i) => (
                   <label
                     className={
-                      "mission " + (template === t.id ? "selected" : "")
+                      "mission " +
+                      (!customMap && template === t.id ? "selected" : "")
                     }
                     key={t.id}
                   >
                     <input
                       type="radio"
                       name="template"
-                      checked={template === t.id}
-                      onChange={() => setTemplate(t.id)}
+                      checked={!customMap && template === t.id}
+                      onChange={() => {
+                        setCustomMap(null);
+                        setTemplate(t.id);
+                      }}
                       aria-label={t.title}
                     />
                     <div className="mission-header">
                       <span>EXPERIMENT / 0{i + 1}</span>
                       <span className="mission-check">
-                        {template === t.id ? (
+                        {!customMap && template === t.id ? (
                           <Check size={15} />
                         ) : (
                           <ArrowUpRight size={16} />
@@ -795,11 +805,17 @@ export default function App() {
                   </label>
                 ))}
               </fieldset>
-              <MapEditor template={template} onApply={setCustomMap} />
+              <MapEditor
+                template={template}
+                initialMap={customMap}
+                onApply={(map) => {
+                  setOpening(false);
+                  setCustomMap(map);
+                }}
+              />
               {customMap && (
                 <p className="availability">
-                  편집한 맵: {customMap.name} · 운전 연결은 다음 PR에서
-                  제공해요.
+                  적용한 맵: {customMap.name} · 아래 시작 버튼으로 운전해보세요.
                 </p>
               )}
               <div className="garage-console">
@@ -950,7 +966,7 @@ export default function App() {
                 {templates.findIndex((t) => t.id === template) + 1}
               </span>
               <h1 ref={driveTitle} tabIndex={-1}>
-                {selected.title}
+                {customMap?.name ?? selected.title}
               </h1>
               <p>
                 <Flag size={13} /> 표시된 칸에 정차한 뒤 P로 마무리

@@ -155,8 +155,11 @@ export function reverseGuide(
   }
   return rails;
 }
-export function useDriving(template: TemplateId) {
-  const scenario = useMemo(() => makeScenario(template), [template]);
+export function useDriving(template: TemplateId, customScenario?: Scenario) {
+  const scenario = useMemo(
+    () => customScenario ?? makeScenario(template),
+    [template, customScenario],
+  );
   const engine = useRef(new ParkingEngine());
   const inputs = useRef(new Map<string, DriverInput>());
   const motion = useRef<MotionFrame>({
