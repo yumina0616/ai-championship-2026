@@ -1,9 +1,16 @@
-// 기준 제어기로 scenario를 실행해 docs/contracts.md 형태의 Episode rollout을 만든다 (#9).
+// 기준 제어기로 scenario를 실행해 docs/contracts.md 형태의 Episode rollout을 만든다 (#9, #9 보강).
 import { baselineReverseParkController } from "./baselineController.js";
 import { FIXED_DT_S, ParkingEngine } from "./engine.js";
+import {
+  appendHoldCommands,
+  flattenPrimitiveTargetsToCommands,
+  planHybridAStar,
+  type HybridAStarOptions,
+} from "./hybridAStar.js";
 import type {
   Command,
   Episode,
+  EpisodeHeader,
   EpisodeStep,
   Outcome,
   Scenario,
@@ -23,10 +30,36 @@ const DEFAULT_OPTIONS: RolloutOptions = {
   startedAt: new Date(0).toISOString(),
 };
 
+function buildEpisode(
+  scenario: Scenario,
+  steps: EpisodeStep[],
+  outcome: Outcome,
+  logComplete: boolean,
+  opts: RolloutOptions
+): Episode {
+  const footer = summarizeFooter(scenario, steps, outcome, logComplete, opts.dtS);
+  const header: EpisodeHeader = {
+    episodeId: opts.episodeId,
+    schemaVersion: "episode.v1-draft",
+    scenarioSnapshot: scenario,
+    scenarioVersion: `${scenario.scenarioId}@1`,
+    engineVersion: "browser-kinematic-ts.v1-unreleased",
+    seed: scenario.seed ?? 0,
+    controllerKind: "planner",
+    policyVersion: null,
+    startedAt: opts.startedAt,
+    consent: { status: "not_requested", version: null },
+    viewMode: "top_down_full_map",
+    assistanceFlags: [],
+    metadata: { plannerUsesTruth: true },
+  };
+  return { header, steps, footer };
+}
+
 /**
- * baselineReverseParkController로 scenario 하나를 끝까지(성공/충돌/timeout/maxSteps) 실행하고
- * Episode를 만든다. controller_kind는 항상 "planner"이고, planner가 truth(poseTruth/goalPose)에
- * 직접 접근했음을 header.metadata.plannerUsesTruth=true로 남긴다.
+ * baselineReverseParkController(반응형 pure-pursuit, 장애물 회피 없음)로 scenario를 실행한다.
+ * 장애물 없는/단순한 scenario에서의 "가장 단순한 기준선" 용도로 남겨둔다 — 실제 학습 데이터
+ * 생성에는 아래 runHybridAStarRollout(장애물 회피 가능)을 쓴다.
  */
 export function runBaselineRollout(scenario: Scenario, options: Partial<RolloutOptions> = {}): Episode {
   const opts = { ...DEFAULT_OPTIONS, ...options };
@@ -68,26 +101,69 @@ export function runBaselineRollout(scenario: Scenario, options: Partial<RolloutO
     }
   }
 
-  const footer = summarizeFooter(scenario, steps, outcome, logComplete, opts.dtS);
+  return buildEpisode(scenario, steps, outcome, logComplete, opts);
+}
+
+export interface HybridAStarRolloutResult {
+  episode: Episode | null;
+  planFound: boolean;
+  expandedNodes: number;
+}
+
+/**
+ * Hybrid A*로 장애물을 피하는 경로를 먼저 계획한 뒤, 그 command 시퀀스를 engine에 그대로 재생해
+ * Episode를 만든다. 계획을 못 찾으면 episode=null을 반환한다(호출자가 로그/스킵 처리).
+ */
+export function runHybridAStarRollout(
+  scenario: Scenario,
+  options: Partial<RolloutOptions> = {},
+  plannerOptions: Partial<HybridAStarOptions> = {}
+): HybridAStarRolloutResult {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const plan = planHybridAStar(scenario, plannerOptions);
+  if (!plan.found) {
+    return { episode: null, planFound: false, expandedNodes: plan.expandedNodes };
+  }
+
+  const plannedTargets = flattenPrimitiveTargetsToCommands(scenario, plan.primitiveTargets, plannerOptions);
+  const commands = appendHoldCommands(scenario, plannedTargets, plannerOptions).slice(0, opts.maxSteps);
+
+  const engine = new ParkingEngine();
+  const observation0 = engine.reset(scenario);
+
+  const steps: EpisodeStep[] = [];
+  let outcome: Outcome = { terminated: false, reason: null };
+  let logComplete = false;
+  let previousObservation = observation0;
+
+  for (let stepIndex = 0; stepIndex < commands.length; stepIndex++) {
+    const requestedAction = commands[stepIndex]!;
+    const result = engine.step(requestedAction, opts.dtS);
+
+    steps.push({
+      stepIndex,
+      simTimeS: result.simTimeS,
+      observationT: previousObservation,
+      requestedActionT: requestedAction,
+      appliedCommandT: result.appliedCommand,
+      nextStateTruth: result.poseTruth,
+      nextOutcome: result.outcome,
+      wallTimestamp: new Date(stepIndex * opts.dtS * 1000).toISOString(),
+    });
+
+    previousObservation = result.observation;
+    outcome = result.outcome;
+
+    if (result.outcome.terminated) {
+      logComplete = true;
+      break;
+    }
+  }
 
   return {
-    header: {
-      episodeId: opts.episodeId,
-      schemaVersion: "episode.v1-draft",
-      scenarioSnapshot: scenario,
-      scenarioVersion: `${scenario.scenarioId}@1`,
-      engineVersion: "browser-kinematic-ts.v1-unreleased",
-      seed: scenario.seed ?? 0,
-      controllerKind: "planner",
-      policyVersion: null,
-      startedAt: opts.startedAt,
-      consent: { status: "not_requested", version: null },
-      viewMode: "top_down_full_map",
-      assistanceFlags: [],
-      metadata: { plannerUsesTruth: true },
-    },
-    steps,
-    footer,
+    episode: buildEpisode(scenario, steps, outcome, logComplete, opts),
+    planFound: true,
+    expandedNodes: plan.expandedNodes,
   };
 }
 
