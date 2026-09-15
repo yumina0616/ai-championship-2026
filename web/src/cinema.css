@@ -240,6 +240,99 @@
   color: #d5e3dd;
   border-color: #81988d;
 }
+.parking-feedback {
+  position: absolute;
+  z-index: 2;
+  top: 135px;
+  left: 28px;
+  width: 260px;
+  padding: 14px 16px;
+  background: #111b23e8;
+  border: 1px solid #72857c66;
+  border-radius: 5px;
+  color: #e7eeeb;
+  pointer-events: none;
+}
+.parking-kicker {
+  font:
+    8px ui-monospace,
+    monospace;
+  letter-spacing: 2px;
+  color: #a5bbb0;
+}
+.parking-feedback > strong {
+  display: block;
+  margin: 8px 0;
+  font-size: 12px;
+  font-weight: 500;
+}
+.parking-checks {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0 8px;
+}
+.parking-checks > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  color: #b1b7bc;
+}
+.parking-checks > span[data-ok="true"] {
+  color: #b0ebcf;
+}
+.parking-feedback p {
+  font:
+    10px/1.7 ui-monospace,
+    monospace;
+  color: #b7c2c9;
+}
+.parking-feedback small {
+  display: block;
+  margin-top: 8px;
+  color: #aebdb5;
+  font-size: 9px;
+}
+.parking-feedback progress {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin-top: 10px;
+  accent-color: #b0ebcf;
+}
+.parking-feedback[data-ready="true"] {
+  border-color: #b0ebcf;
+}
+.parking-confirm > svg {
+  color: #b0ebcf;
+}
+.parking-timeout-reason {
+  color: #e4cfa9 !important;
+}
+@media (max-width: 600px) {
+  .parking-feedback {
+    top: 132px;
+    left: 12px;
+    width: 226px;
+    max-width: calc(100% - 24px);
+    padding: 9px 12px;
+  }
+  .parking-feedback > strong {
+    font-size: 11px;
+    margin: 6px 0;
+  }
+  .parking-checks {
+    gap: 10px;
+    margin: 7px 0 4px;
+  }
+  .parking-feedback p {
+    font-size: 9px;
+  }
+  .parking-feedback small {
+    font-size: 8px;
+    margin-top: 5px;
+  }
+}
 .opening-caption {
   position: absolute;
   top: 53vh;

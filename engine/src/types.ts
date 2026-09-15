@@ -151,6 +151,20 @@ export interface StepResult {
   outcome: Outcome;
 }
 
+/** 읽기 전용 평가 상태. HUD용 truth 정보이며 정책 Observation에는 넣지 않는다. */
+export interface ParkingStatus {
+  collision: boolean;
+  inside: boolean;
+  positionErrorM: number;
+  yawErrorRad: number;
+  positionOk: boolean;
+  angleOk: boolean;
+  stopped: boolean;
+  ready: boolean;
+  heldForS: number;
+  requiredHoldS: number;
+}
+
 // --- Episode (docs/contracts.md "Episode" 절) ---
 
 export type ControllerKind = "human" | "planner" | "learned" | "mock";

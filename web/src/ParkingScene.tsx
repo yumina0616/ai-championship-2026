@@ -20,7 +20,12 @@ import {
 import { Vector3, Shape, DataTexture, RGBAFormat, RepeatWrapping } from "three";
 import type { OrbitControls as OrbitControlsType } from "three-stdlib";
 import type { TemplateId } from "./preview";
-import { carTransform, makeScenario, reverseGuide } from "./driving";
+import {
+  carTransform,
+  makeScenario,
+  reverseGuide,
+  goalOutline,
+} from "./driving";
 import type { StepResult } from "../../engine/src/index";
 import { storyCamera, FILM_SECONDS } from "./story";
 import { sampleMotion, type MotionFrame } from "./motion";
@@ -618,49 +623,91 @@ function World({
           size={[17.4, 0.4, 0.35]}
           color="#687076"
         />
-        {[-6, -3, 0, 3, 6].map((x, i) => (
-          <group key={x}>
-            <Box
-              position={[x, 0.139, -1.7]}
-              size={[2.77, 0.015, 4.48]}
-              color={x === 0 ? "#66756e" : i % 2 ? "#535c65" : "#505961"}
-            />
-            {[-1.43, 1.43].map((offset) => (
+        {[-6, -3, 0, 3, 6].map((x, i) =>
+          x === 0 ? (
+            <group key={x} name="parking-goal">
+              <mesh
+                position={[
+                  scenario.goalSpace.centerXM,
+                  0.139,
+                  -scenario.goalSpace.centerYM,
+                ]}
+                rotation={[0, scenario.goalSpace.yawRad, 0]}
+              >
+                <boxGeometry
+                  args={[
+                    scenario.goalSpace.lengthM,
+                    0.015,
+                    scenario.goalSpace.widthM,
+                  ]}
+                />
+                <meshStandardMaterial color="#66756e" roughness={0.85} />
+              </mesh>
+              <Line
+                points={goalOutline(scenario.goalSpace)}
+                color="#d7eade"
+                lineWidth={3}
+              />
+              <group
+                position={[
+                  scenario.goalSpace.centerXM,
+                  0.18,
+                  -scenario.goalSpace.centerYM,
+                ]}
+                rotation={[0, scenario.goalPose.yawRad, 0]}
+              >
+                <Line
+                  points={[
+                    [-0.55, 0, 0],
+                    [0.55, 0, 0],
+                    [0.25, 0, -0.25],
+                  ]}
+                  color="#b9d1c5"
+                  lineWidth={2}
+                />
+                <Line
+                  points={[
+                    [0.55, 0, 0],
+                    [0.25, 0, 0.25],
+                  ]}
+                  color="#b9d1c5"
+                  lineWidth={2}
+                />
+              </group>
+            </group>
+          ) : (
+            <group key={x}>
               <Box
-                key={offset}
-                position={[x + offset, 0.16, -1.7]}
-                size={[0.075, 0.022, 4.5]}
+                position={[x, 0.139, -1.7]}
+                size={[2.77, 0.015, 4.48]}
+                color={x === 0 ? "#66756e" : i % 2 ? "#535c65" : "#505961"}
+              />
+              {[-1.43, 1.43].map((offset) => (
+                <Box
+                  key={offset}
+                  position={[x + offset, 0.16, -1.7]}
+                  size={[0.075, 0.022, 4.5]}
+                  color="#f4f4da"
+                />
+              ))}
+              <Box
+                position={[x, 0.16, -3.94]}
+                size={[2.93, 0.025, 0.075]}
                 color="#f4f4da"
               />
-            ))}
-            <Box
-              position={[x, 0.16, -3.94]}
-              size={[2.93, 0.025, 0.075]}
-              color="#f4f4da"
-            />
-            <Box
-              position={[x, 0.16, 2.08]}
-              size={[1.35, 0.02, 0.08]}
-              color="#e7e4dc"
-            />
-            <Box
-              position={[x, 0.23, -3.7]}
-              size={[1, 0.16, 0.16]}
-              color="#e8c65d"
-            />
-          </group>
-        ))}
-        <Line
-          points={[
-            [-1.32, 0.19, 0.53],
-            [1.32, 0.19, 0.53],
-            [1.32, 0.19, -3.83],
-            [-1.32, 0.19, -3.83],
-            [-1.32, 0.19, 0.53],
-          ]}
-          color="#b9d1c5"
-          lineWidth={2.5}
-        />
+              <Box
+                position={[x, 0.16, 2.08]}
+                size={[1.35, 0.02, 0.08]}
+                color="#e7e4dc"
+              />
+              <Box
+                position={[x, 0.23, -3.7]}
+                size={[1, 0.16, 0.16]}
+                color="#e8c65d"
+              />
+            </group>
+          ),
+        )}
         {scenario.obstacles.map((o, i) =>
           o.id === "pillar" ? (
             <group key={o.id} position={[o.centerXM, 0, -o.centerYM]}>

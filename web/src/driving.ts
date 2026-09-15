@@ -6,6 +6,7 @@ import {
   type Pose,
   type Scenario,
   type StepResult,
+  type OrientedRect,
 } from "../../engine/src/index";
 import type { TemplateId } from "./preview";
 import {
@@ -28,7 +29,7 @@ export function makeScenario(template: TemplateId): Scenario {
     yawRad: -Math.PI / 2,
   }));
   return {
-    scenarioId: "parkside-" + template + "-v1",
+    scenarioId: "parkside-" + template + "-v2",
     layoutGroup: template,
     seed: 42,
     vehicle: {
@@ -68,16 +69,16 @@ export function makeScenario(template: TemplateId): Scenario {
       periodS: 0.05,
       noiseStdM: 0,
     },
-    goalPose: { xM: 0, yM: 2.95, yawRad: -Math.PI / 2 },
+    goalPose: { xM: 0, yM: 2.9, yawRad: -Math.PI / 2 },
     goalSpace: {
       centerXM: 0,
-      centerYM: 1.65,
-      lengthM: 4.5,
+      centerYM: 1.6,
+      lengthM: 5.4,
       widthM: 2.8,
       yawRad: -Math.PI / 2,
     },
     successCriteria: {
-      positionToleranceM: 0.25,
+      positionToleranceM: 0.6,
       yawToleranceRad: 0.0872665,
       stoppedSpeedMps: 0.05,
       holdTimeS: 1,
@@ -85,6 +86,28 @@ export function makeScenario(template: TemplateId): Scenario {
       collisionTerminates: true,
     },
   };
+}
+// 목표 외곽선의 중심이 실제 판정 경계다. 별도 화면용 치수를 만들지 않는다.
+export function goalOutline(space: OrientedRect): [number, number, number][] {
+  return [
+    [1, 1],
+    [1, -1],
+    [-1, -1],
+    [-1, 1],
+    [1, 1],
+  ].map(([sx, sy]) => {
+    const x = (sx * space.lengthM) / 2,
+      y = (sy * space.widthM) / 2;
+    return [
+      space.centerXM + x * Math.cos(space.yawRad) - y * Math.sin(space.yawRad),
+      0.18,
+      -(
+        space.centerYM +
+        x * Math.sin(space.yawRad) +
+        y * Math.cos(space.yawRad)
+      ),
+    ];
+  });
 }
 export function carTransform(pose: Pose): {
   position: [number, number, number];
@@ -211,7 +234,9 @@ export function useDriving(template: TemplateId) {
   }, [clearInputs]);
   const shift = useCallback(
     (next: Gear) => {
-      if (!canShift(previous.current.targetSpeedMps)) {
+      const confirmingSuccess =
+        next === "P" && motion.current.current?.outcome.reason === "success";
+      if (!confirmingSuccess && !canShift(previous.current.targetSpeedMps)) {
         setMessage("먼저 브레이크로 완전히 정지한 뒤 기어를 바꿔주세요.");
         return false;
       }
@@ -349,6 +374,7 @@ export function useDriving(template: TemplateId) {
   }, [active, paused, pause, stop, press, release, scenario, shift]);
   return {
     motion,
+    parkingStatus: engine.current.getParkingStatus(),
     scenario,
     result,
     active,

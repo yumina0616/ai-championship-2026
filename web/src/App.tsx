@@ -38,6 +38,7 @@ import { useDriving } from "./driving";
 import type { DriverInput, Gear } from "./driver-controls";
 import type { CameraMode } from "./ParkingScene";
 import SensorAssist, { sensorFeedback } from "./SensorAssist";
+import ParkingFeedback, { parkingMessage } from "./ParkingFeedback";
 import { chapterAt, storyChapters } from "./story";
 const ParkingScene = lazy(() => import("./ParkingScene"));
 
@@ -992,6 +993,15 @@ export default function App() {
               }
               details={sensors}
             />
+            {state === "ready" &&
+              !driving.paused &&
+              !ended &&
+              driving.parkingStatus && (
+                <ParkingFeedback
+                  status={driving.parkingStatus}
+                  criteria={driving.scenario.successCriteria}
+                />
+              )}
             <div className="stage-caption">
               <span>SIMULATED ENVIRONMENT · NO LIVE VEHICLE</span>
               <span>
@@ -1060,9 +1070,15 @@ export default function App() {
               </div>
             )}
             {parkConfirm && (
-              <div className="park-confirm" role="status">
-                <Check size={19} /> 위치 확인 완료. P 기어를 선택해 주차를
-                마무리하세요.
+              <div className="stage-overlay">
+                <section className="notice-panel parking-confirm" role="status">
+                  <Check size={28} />
+                  <h2>주차 조건을 충족했어요.</h2>
+                  <p>위치·각도·정지 확인 완료. P 기어로 마무리하세요.</p>
+                  <button className="button orange" onClick={() => shift("P")}>
+                    P로 마무리
+                  </button>
+                </section>
               </div>
             )}
             {state === "finished" && (
@@ -1077,7 +1093,9 @@ export default function App() {
                       ? "NICE PARK."
                       : ended === "collision"
                         ? "TRY AGAIN."
-                        : "GOOD RUN."}
+                        : ended === "timeout"
+                          ? "TIME UP."
+                          : "GOOD RUN."}
                   </h2>
                   <p>
                     {ended === "success"
@@ -1088,6 +1106,14 @@ export default function App() {
                           ? "90초가 지났어요. 같은 환경에서 다시 도전할 수 있어요."
                           : "여기까지의 시도를 확인하고, 다시 도전해보세요."}
                   </p>
+                  {ended === "timeout" && driving.parkingStatus && (
+                    <p className="parking-timeout-reason">
+                      마지막 미충족 조건:{" "}
+                      {driving.parkingStatus.ready
+                        ? "정지 유지 시간이 부족했어요"
+                        : parkingMessage(driving.parkingStatus)}
+                    </p>
+                  )}
                   <dl className="result-metrics">
                     <div>
                       <dt>종료 사유</dt>
