@@ -9,3 +9,6 @@ export {
 } from "./collision.js";
 export * from "./types.js";
 export { loadScenarioFromJson, type ScenarioJson } from "./scenarioLoader.js";
+export { computeSensorScan } from "./sensor.js";
+export { computeGoalRelative } from "./goal.js";
+export { createRng, nextGaussian } from "./rng.js";

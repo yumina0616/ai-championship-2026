@@ -1,9 +1,10 @@
 // examples/scenarios/*.json(snake_case)을 engine 내부 Scenario 타입(camelCase)으로 변환한다.
 // #3에서 만든 fixture를 실제로 엔진에 흘려서 계약 문서와 구현이 일치하는지 증명하는 용도.
-import type { RectObstacle, Scenario, VehicleSpec, WorldBounds } from "./types.js";
+import type { RectObstacle, Scenario, SensorSpec, VehicleSpec, WorldBounds } from "./types.js";
 
 export interface ScenarioJson {
   scenario_id: string;
+  seed?: number;
   vehicle: {
     wheelbase_m: number;
     front_overhang_m: number;
@@ -15,6 +16,7 @@ export interface ScenarioJson {
   };
   world: { bounds: { min_x: number; max_x: number; min_y: number; max_y: number } };
   start: { x_m: number; y_m: number; yaw_rad: number };
+  goal: { pose: { x_m: number; y_m: number; yaw_rad: number } };
   obstacles: Array<{
     id: string;
     center_x_m: number;
@@ -23,6 +25,15 @@ export interface ScenarioJson {
     width_m: number;
     yaw_rad: number;
   }>;
+  sensor: {
+    pose_vehicle: { x_m: number; y_m: number; yaw_rad: number };
+    ray_count: number;
+    angle_min_rad: number;
+    angle_increment_rad: number;
+    max_range_m: number;
+    period_s: number;
+    noise_std_m: number;
+  };
   evaluation: { timeout_sim_s: number };
 }
 
@@ -50,6 +61,20 @@ export function loadScenarioFromJson(json: ScenarioJson): Scenario {
     widthM: o.width_m,
     yawRad: o.yaw_rad,
   }));
+  const sensor: SensorSpec = {
+    id: "primary",
+    poseVehicle: {
+      xM: json.sensor.pose_vehicle.x_m,
+      yM: json.sensor.pose_vehicle.y_m,
+      yawRad: json.sensor.pose_vehicle.yaw_rad,
+    },
+    rayCount: json.sensor.ray_count,
+    angleMinRad: json.sensor.angle_min_rad,
+    angleIncrementRad: json.sensor.angle_increment_rad,
+    maxRangeM: json.sensor.max_range_m,
+    periodS: json.sensor.period_s,
+    noiseStdM: json.sensor.noise_std_m,
+  };
   return {
     scenarioId: json.scenario_id,
     vehicle,
@@ -57,5 +82,12 @@ export function loadScenarioFromJson(json: ScenarioJson): Scenario {
     start: { xM: json.start.x_m, yM: json.start.y_m, yawRad: json.start.yaw_rad },
     obstacles,
     timeoutSimS: json.evaluation.timeout_sim_s,
+    sensor,
+    goalPose: {
+      xM: json.goal.pose.x_m,
+      yM: json.goal.pose.y_m,
+      yawRad: json.goal.pose.yaw_rad,
+    },
+    seed: json.seed,
   };
 }
