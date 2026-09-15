@@ -1,0 +1,16 @@
+{
+  "name": "@parking-spike/engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "docs/contracts.md의 저속 차량 제어·충돌(#5) 구현. 웹 UI(#4/#6/#8)와 독립된 TypeScript 모듈.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.1"
+  }
+}
