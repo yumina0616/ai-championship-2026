@@ -1,11 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const mesa = process.env.PARKSIDE_TEST_MESA === "1";
+
 export default defineConfig({
   testDir: "./tests",
   timeout: process.env.CI ? 60_000 : 30_000,
   fullyParallel: true,
   workers: 1,
   use: {
+    headless: !mesa,
     baseURL: "http://127.0.0.1:5173",
     // 연속 WebGL 화면 readback은 소프트웨어 GPU의 입력 처리를 지연시킵니다.
     // DOM/네트워크 trace와 실패 스크린샷은 유지합니다.
@@ -17,7 +20,10 @@ export default defineConfig({
     },
     screenshot: "only-on-failure",
     launchOptions: {
-      args: ["--use-gl=angle", "--use-angle=swiftshader"],
+      args: [
+        "--use-gl=angle",
+        mesa ? "--use-angle=gl" : "--use-angle=swiftshader",
+      ],
     },
     storageState:
       process.env.CI || process.env.PARKSIDE_TEST_LOW
