@@ -7,7 +7,14 @@ export default defineConfig({
   workers: 1,
   use: {
     baseURL: "http://127.0.0.1:5173",
-    trace: "retain-on-failure",
+    // 연속 WebGL 화면 readback은 소프트웨어 GPU의 입력 처리를 지연시킵니다.
+    // DOM/네트워크 trace와 실패 스크린샷은 유지합니다.
+    trace: {
+      mode: "retain-on-failure",
+      screenshots: false,
+      snapshots: true,
+      sources: true,
+    },
     screenshot: "only-on-failure",
     launchOptions: { args: ["--enable-unsafe-swiftshader"] },
     storageState:

@@ -83,7 +83,7 @@ test("편집기 숫자 조정·삭제·파일 복원과 모바일 경계", async
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.screenshot({ path: "/private/tmp/parkside-editor-mobile.png" });
+  await page.screenshot({ path: test.info().outputPath("editor-mobile.png") });
 });
 
 test("탑뷰 포인터 드래그와 초기화", async ({ page }) => {
@@ -105,5 +105,5 @@ test("탑뷰 포인터 드래그와 초기화", async ({ page }) => {
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "템플릿으로 초기화" }).click();
   await expect(x).toHaveValue(String(before));
-  await page.screenshot({ path: "/private/tmp/parkside-editor-desktop.png" });
+  await page.screenshot({ path: test.info().outputPath("editor-desktop.png") });
 });
