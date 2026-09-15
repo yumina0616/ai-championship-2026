@@ -1,0 +1,716 @@
+/* 차량과 같은 Canvas를 공유하는 시네마틱 프레젠테이션. 물리/센서에는 영향 없음. */
+:root {
+  color-scheme: dark;
+  color: #eef0ef;
+  background: #101317;
+  --paper: #101317;
+  --ink: #eef0ef;
+  --orange: #e4e8e4;
+  --lime: #bdd1c4;
+  --line: #363d43;
+  --pop: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cinema {
+  position: relative;
+  background: #101317;
+}
+.world-stage {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  z-index: 0;
+  overflow: hidden;
+  transition:
+    top 1.2s var(--ease),
+    height 1.2s var(--ease);
+}
+.world-stage .scene-canvas {
+  width: 100%;
+  height: 100%;
+}
+.cinema .site-header {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 90px;
+  z-index: 5;
+  background: transparent;
+  color: #eef0ef;
+  padding: 0 6%;
+  border-bottom: 1px solid #ffffff16;
+}
+.cinema .wordmark {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.8px;
+}
+.cinema .logo-mark {
+  background: none;
+  box-shadow: none;
+  color: #dde5df;
+  transform: none;
+  border: 1px solid #98a4ab;
+  border-radius: 3px;
+}
+.cinema .build-tag {
+  background: none;
+  border: none;
+  color: #a6b2b9;
+}
+.cinema .hero {
+  position: relative;
+  margin: 0;
+  height: 100svh;
+  min-height: 760px;
+  max-width: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cinema .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  transform: none;
+  background:
+    linear-gradient(90deg, #080d14bd, transparent 80%),
+    linear-gradient(0deg, #101317 1%, transparent 42%, #080d1422);
+  z-index: 1;
+  pointer-events: none;
+}
+.cinema .hero::after {
+  display: none;
+}
+.cinema .hero-copy {
+  position: absolute;
+  top: auto;
+  left: 6%;
+  bottom: 18%;
+  width: 78%;
+  max-width: none;
+  z-index: 2;
+  padding: 0;
+  pointer-events: auto;
+}
+.cinema .edition-label {
+  margin: 0 0 25px;
+  animation: cinema-rise 0.9s 0.5s both;
+}
+.cinema .outline-label {
+  border: none;
+  padding: 0;
+  color: #b6c3cb;
+  font:
+    10px ui-monospace,
+    monospace;
+  letter-spacing: 2.6px;
+}
+.cinema .hero h1 {
+  margin: 0;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(52px, 7.5vw, 118px);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.055em;
+  transform: none;
+  color: #f5f5f0;
+}
+.cinema .hero h1 > span {
+  display: block;
+  transform: none;
+  text-shadow: none;
+  animation: cinema-rise 1.1s 0.6s both;
+}
+.cinema .hero h1 > span:nth-child(2) {
+  animation-delay: 0.75s;
+  color: #c6cecd;
+}
+.cinema .outline-type {
+  -webkit-text-stroke: 0;
+  color: inherit;
+}
+.cinema .title-dot {
+  color: inherit;
+  text-shadow: none;
+}
+.cinema .hero-description {
+  margin: 28px 0 0;
+  animation: cinema-rise 0.9s 0.9s both;
+}
+.cinema .hero-description h2 {
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.5px;
+}
+.cinema .hero-description p {
+  color: #aab6bf;
+  font-size: 13px;
+  line-height: 1.9;
+  margin-top: 14px;
+}
+.cinema .hero-actions {
+  margin-top: 28px;
+  animation: cinema-rise 0.9s 1s both;
+}
+.cinema .hero-footnote {
+  color: #88969f;
+  font-size: 10px;
+}
+.cinema .hero-visual {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  margin: 0;
+  pointer-events: none;
+}
+.cinema .hero-topline,
+.cinema .orbit-lettering,
+.cinema .parking-stamp,
+.cinema .play-ribbon,
+.cinema .scene-hint {
+  display: none;
+}
+.cinema .floating-sensor {
+  top: auto;
+  left: auto;
+  right: 6%;
+  bottom: 115px;
+  z-index: 3;
+  border: 1px solid #7b8b9655;
+  border-radius: 3px;
+  background: #111a22bb;
+  color: #d4ddd9;
+  box-shadow: none;
+  transform: none;
+  animation: cinema-rise 0.8s 1.1s both;
+  pointer-events: auto;
+}
+.cinema .floating-sensor small {
+  color: #9baab4;
+}
+.cinema .hero-bottom {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 28px;
+  width: auto;
+  z-index: 3;
+  color: #92a1ab;
+  border-color: #ffffff25;
+  pointer-events: auto;
+}
+.cinema .hero-bottom > a,
+.cinema .motion-toggle {
+  border-color: #78838a66;
+  color: #acb7bd;
+  background: transparent;
+}
+.cinema .button {
+  border-radius: 2px;
+  box-shadow: none;
+  font-weight: 500;
+  transition:
+    background 160ms,
+    transform 160ms;
+}
+.cinema .button.orange {
+  background: #e5e8e4;
+  color: #12181c;
+  border: 1px solid #e5e8e4;
+}
+.cinema .button.orange:hover {
+  background: #fff;
+  transform: translateY(-2px);
+}
+.cinema .button:active {
+  transform: scale(0.98);
+}
+.cinema .text-link {
+  color: #cbd3d7;
+  border-color: #7a858c;
+}
+.opening-signature {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #090d12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 19px;
+  pointer-events: none;
+  animation: opening-out 1.8s ease both;
+}
+.opening-signature span {
+  color: #e8ecea;
+  font-size: clamp(32px, 5vw, 72px);
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  padding-left: 0.28em;
+  animation: signature-focus 1.4s var(--ease) both;
+}
+.opening-signature small {
+  font:
+    9px ui-monospace,
+    monospace;
+  color: #78848c;
+  letter-spacing: 3px;
+}
+@keyframes opening-out {
+  0%,
+  45% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@keyframes signature-focus {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+@keyframes cinema-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.cinema .garage-section {
+  position: relative;
+  background: #101317;
+  max-width: none;
+  padding: 100px 6%;
+}
+.cinema .section-heading h2,
+.cinema .experiment-copy h2 {
+  font-weight: 400;
+  letter-spacing: -1.8px;
+}
+.cinema .section-heading p,
+.cinema .experiment-copy p {
+  color: #9aa5ad;
+}
+.cinema .eyebrow,
+.cinema .section-heading .eyebrow {
+  color: #8899a4;
+}
+.cinema .mission {
+  background: #191f25;
+  border: 1px solid #374149;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: none;
+  transform: none;
+}
+.cinema .mission:hover {
+  background: #20282f;
+  transform: translateY(-4px);
+  box-shadow: none;
+}
+.cinema .mission.selected {
+  border-color: #c5d1c8;
+  box-shadow: inset 0 2px #c5d1c8;
+}
+.cinema .mission-header,
+.cinema .mission-caption p {
+  color: #9ba9b3;
+}
+.cinema .mission-check,
+.cinema .level {
+  background: #2c363e;
+  color: #c3cdd2;
+}
+.cinema .selected .mission-check {
+  background: #c6d5cc;
+  color: #162019;
+}
+.cinema .mission-map {
+  transform: perspective(600px) rotateX(22deg) rotateZ(-5deg) scale(0.9);
+}
+.cinema .mission:hover .mission-map,
+.cinema .mission.selected .mission-map {
+  transform: perspective(600px) rotateX(18deg) rotateZ(-3deg) scale(0.94);
+}
+.cinema .map-road {
+  background: #46525b;
+  border-color: #7d878c;
+  box-shadow: 0 7px #333e45;
+  border-radius: 3px;
+}
+.cinema .map-bay {
+  border-color: #98a4ac;
+}
+.cinema .map-bay.goal {
+  background: #6c8579;
+  border-color: #bdd3c6;
+  box-shadow: none;
+}
+.cinema .map-player {
+  background: #cdd4d2;
+  box-shadow: 2px 3px #384951;
+}
+.cinema .map-pillar {
+  background: #9b927c;
+  box-shadow: 3px 3px #665f51;
+}
+.cinema .garage-console {
+  background: #191f25;
+  border: 1px solid #374149;
+  border-radius: 4px;
+}
+.cinema .spec-icon {
+  background: #2c363e;
+  color: #c5d1c8;
+  border-radius: 3px;
+}
+.cinema .car-spec > div > span,
+.cinema .availability {
+  color: #a3b0ba;
+}
+.cinema .mode-switch {
+  background: #10161b;
+  border: 1px solid #3c474e;
+  border-radius: 3px;
+}
+.cinema .mode-switch label {
+  border-radius: 2px;
+  color: #b5bec3;
+}
+.cinema .mode-switch label.selected {
+  background: #3e4a52;
+  color: #fff;
+}
+.cinema .experiment-section {
+  margin: 0;
+  padding: 90px 6%;
+  background: #192027;
+  border-radius: 0;
+  border-top: 1px solid #343e47;
+}
+.cinema .experiment-steps b {
+  background: #303c46;
+}
+.cinema .buddy-board {
+  background: #232e37;
+  border: 1px solid #45505a;
+  border-radius: 4px;
+  box-shadow: none;
+  transform: none;
+}
+.cinema .buddy-board::before {
+  display: none;
+}
+.cinema .buddy-board .buddy {
+  filter: grayscale(1) drop-shadow(5px 8px 7px #0005);
+  animation: none;
+}
+.cinema .buddy-label,
+.cinema .buddy-board p,
+.cinema .board-corner {
+  color: #a0aeb8;
+}
+.cinema .site-footer {
+  position: relative;
+  background: #101317;
+}
+.cinema .site-footer p,
+.cinema .site-footer > span:not(.wordmark) {
+  color: #87959f;
+}
+.cinema .drive-screen {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  background: transparent;
+}
+.cinema .drive-header,
+.cinema .cockpit {
+  pointer-events: auto;
+  background: #10161df5;
+  border-color: #39424a;
+}
+.cinema .driving-stage {
+  background: transparent;
+  overflow: visible;
+  pointer-events: none;
+}
+.cinema .driving-stage > * {
+  pointer-events: auto;
+}
+.cinema .driving-stage > .mission-hud {
+  height: auto;
+  pointer-events: none;
+}
+.cinema .mission-hud h1 {
+  color: #e0e6e8;
+  font-weight: 400;
+}
+.cinema .mission-hud p,
+.cinema .stage-caption {
+  color: #a6b4be;
+  pointer-events: none;
+}
+.cinema .camera-switch,
+.cinema .view-controls .icon-button {
+  background: #182129ed;
+  border-color: #53616b;
+  border-radius: 3px;
+}
+.cinema .camera-switch button {
+  color: #a9b7c0;
+  border-radius: 2px;
+}
+.cinema .camera-switch button[aria-pressed="true"],
+.cinema .icon-button[aria-pressed="true"] {
+  background: #c2d0c8;
+  color: #111c18;
+}
+.cinema .sensor-assist {
+  background: #111b23eb;
+  border-color: #4d626e;
+  border-radius: 4px;
+  box-shadow: none;
+  animation: cinema-rise 240ms var(--ease) both;
+}
+.cinema .sensor-heading {
+  color: #a8c6b7;
+}
+.cinema .sensor-disclaimer,
+.cinema .sensor-details {
+  color: #a9b9c3;
+}
+.cinema .sensor-car {
+  background: #b4bfbd;
+}
+.cinema .cockpit {
+  animation: cinema-rise 240ms var(--ease) both;
+}
+.cinema.entering .cockpit,
+.cinema.entering .mission-hud,
+.cinema.entering .view-controls,
+.cinema.entering .sensor-assist {
+  opacity: 0;
+  pointer-events: none;
+  animation: none;
+}
+.cinema .icon-button,
+.cinema .gear-selector {
+  border-radius: 4px;
+  border-color: #55616a;
+}
+.cinema .gear-selector {
+  background: #0a1015;
+}
+.cinema .gear-selector button {
+  border-radius: 3px;
+}
+.cinema .gear-selector button[aria-pressed="true"] {
+  background: #cad5ce;
+  color: #15201b;
+  box-shadow: none;
+}
+.cinema .input-button {
+  background: #27333e;
+  border-color: #5b6a75;
+  color: #e2e9e7;
+}
+.cinema .input-button.throttle {
+  background: #495e54;
+  color: #e5f0e8;
+  border-color: #7d9688;
+}
+.cinema .input-button.brake {
+  background: #38434c;
+}
+.cinema .input-button.pressed {
+  background: #9eb8a8;
+  color: #15231b;
+}
+.cinema .wheel {
+  filter: grayscale(1);
+}
+.cinema .wheel-display {
+  color: #a8b6c0;
+}
+.cinema .cockpit-status {
+  border-color: #37444d;
+  color: #a9bac4;
+}
+.cinema .stage-overlay {
+  background: #08101888;
+}
+.cinema .notice-panel,
+.cinema .result-panel {
+  background: #17212bf5;
+  border: 1px solid #51606b;
+  border-radius: 5px;
+  color: #eef2f1;
+  box-shadow: 0 30px 80px #0008;
+}
+.cinema .notice-panel p,
+.cinema .result-panel p,
+.cinema .result-note {
+  color: #b1bdc6;
+}
+.cinema .result-metrics {
+  background: #111a23;
+  border-color: #455560;
+}
+.cinema .result-metrics dt,
+.cinema .result-metrics small {
+  color: #a0b1bc;
+}
+.cinema .button.secondary {
+  background: #303e49;
+  color: #e7eded;
+  border-color: #6c7d88;
+}
+.cinema .entry-overlay {
+  background: transparent;
+  backdrop-filter: none;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 35px 6%;
+}
+.cinema .entry-overlay .notice-panel {
+  background: #101820dc;
+  max-width: 390px;
+  width: auto;
+  padding: 20px 25px;
+  box-shadow: none;
+  text-align: left;
+}
+.cinema .entry-overlay h2 {
+  font-size: 19px;
+  margin: 12px 0;
+}
+.cinema dialog {
+  background: #19232c;
+  border: 1px solid #5e6d77;
+  color: #eef2ef;
+  border-radius: 5px;
+}
+.cinema .dialog-content p,
+.cinema .guide-list p {
+  color: #adbac3;
+}
+.cinema .guide-list b {
+  background: #34434e;
+  color: #ccd9d1;
+}
+.cinema .scene-fallback {
+  background: #15202a;
+  color: #bdcad4;
+  padding: 30px;
+}
+.cinema :focus-visible {
+  outline-color: #bdd6c7;
+}
+@media (max-width: 800px) {
+  .cinema .hero {
+    min-height: 780px;
+  }
+  .cinema .site-header {
+    height: 70px;
+    padding: 0 6%;
+  }
+  .cinema .hero-copy {
+    width: 89%;
+    bottom: 22%;
+  }
+  .cinema .hero h1 {
+    font-size: clamp(45px, 9.5vw, 70px);
+  }
+  .cinema .hero-description h2 {
+    font-size: 17px;
+  }
+  .cinema .hero-description p {
+    font-size: 12px;
+  }
+  .cinema .floating-sensor {
+    bottom: 83px;
+    right: 6%;
+    padding: 10px 13px;
+  }
+  .cinema .hero-bottom {
+    bottom: 20px;
+    font-size: 8px;
+  }
+  .cinema .hero-bottom > span:nth-child(2) {
+    display: none;
+  }
+  .cinema .garage-section,
+  .cinema .experiment-section {
+    padding: 65px 6%;
+  }
+  .cinema .hero::before {
+    background: linear-gradient(
+      0deg,
+      #101317 1%,
+      #0b111acc 34%,
+      transparent 86%
+    );
+  }
+  .cinema .edition-label {
+    margin-bottom: 18px;
+  }
+}
+@media (max-width: 420px) {
+  .cinema .hero-copy {
+    bottom: 23%;
+  }
+  .cinema .hero h1 {
+    font-size: 43px;
+  }
+  .cinema .hero-actions {
+    gap: 15px;
+  }
+  .cinema .hero-actions .button {
+    padding: 17px;
+    font-size: 12px;
+  }
+  .cinema .hero-actions .text-link {
+    font-size: 11px;
+  }
+  .cinema .hero-footnote {
+    font-size: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cinema *,
+  .cinema *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+  .opening-signature {
+    display: none;
+  }
+}
+.cinema.motion-paused .opening-signature {
+  display: none;
+}
+.cinema.motion-paused .world-stage {
+  transition: none;
+}

@@ -23,3 +23,5 @@ checkpoints/
 *.onnx
 *.bag
 *.mcap
+test-results/
+playwright-report/

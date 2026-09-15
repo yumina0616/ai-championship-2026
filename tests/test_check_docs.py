@@ -28,6 +28,15 @@ class CheckDocsTests(unittest.TestCase):
         self.write("README.md", "[없음](docs/missing.md)")
         self.assertEqual(len(check(self.root)[0]), 1)
 
+    def test_package_readme_and_public_json_without_dependencies(self):
+        (self.root / "web" / "public").mkdir(parents=True)
+        (self.root / "web" / "node_modules").mkdir()
+        self.write("web/README.md", "[없음](missing.md)")
+        self.write("web/public/runtime.json", "{")
+        self.write("web/node_modules/README.md", "[검사 제외](missing.md)")
+        errors, markdown_count, json_count = check(self.root)
+        self.assertEqual((len(errors), markdown_count, json_count), (2, 1, 1))
+
     def test_invalid_json_and_nonfinite_constant(self):
         self.write("examples/invalid.json", "{")
         self.write("examples/nonfinite.json", '{"x": NaN}')

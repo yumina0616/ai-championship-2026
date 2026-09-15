@@ -83,7 +83,7 @@ git diff --check
 
 문서 검사기는 상대 Markdown 파일 링크의 존재와 JSON 문법을 검사합니다. 외부 URL 접속, heading anchor, 모든 Markdown 문법, 차량 물리/센서/학습 품질은 검사하지 않습니다.
 
-앱이 추가되면 실제 package/lock과 선택 언어의 테스트 명령을 추가합니다. 웹은 타입·build·핵심 UI, 엔진은 차량·센서·충돌·종료, 데이터는 정렬·동의·권한, 학습은 관측·artifact·평가 분리를 검사합니다. 없는 테스트를 통과했다고 적지 않습니다.
+앱 변경에는 엔진의 `npm run typecheck`/`npm test`, 웹의 `npm run build`/`npm test`를 해당 폴더에서 추가 실행합니다. 첫 설치와 Chromium 설치는 [웹 개발 안내](../web/README.md)를 따릅니다. `웹·엔진 검증` workflow가 엔진 타입·Vitest, 웹 빌드·Playwright를 검사합니다. 웹 artifact는 배포 URL이 아닙니다. 데이터·학습 기능이 추가되면 동의/권한·관측·artifact·평가 분리 검사를 함께 추가합니다. 없는 테스트를 통과했다고 적지 않습니다.
 
 완료 조건: Issue 충족 + 관련 테스트 + 문서/예시 일치 + 리뷰 + CI + 실제 확인 가능한 증거. 데모는 mock인지 실제인지 표시합니다.
 

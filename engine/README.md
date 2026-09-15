@@ -1,6 +1,6 @@
 # engine — 저속 차량 제어·충돌·센서·기준 제어기 (Issue #5, #7, #9)
 
-`docs/contracts.md`의 "엔진 인터페이스"를 구현한 TypeScript 모듈. 웹 UI(React, #4/#6/#8)와 독립적이며, 아직 어디에도 import되지 않은 순수 로직 패키지다.
+`docs/contracts.md`의 "엔진 인터페이스"를 구현한 TypeScript 모듈. React에 의존하지 않는 순수 로직 패키지이며 `web/src/driving.ts`에서 import하여 실제 수동 주행에 사용한다. 기준 제어기는 아직 웹 관전 모드에 연결하지 않았다.
 
 ## 범위
 

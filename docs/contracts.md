@@ -79,6 +79,12 @@ interface EngineError {
 
 ## Episode
 
+### 웹 수동 입력 어댑터 (#8)
+
+웹의 P/R/D·액셀·브레이크·조향 입력은 기존 `Command`의 signed speed/steering으로 변환합니다. 엔진의 모델/정책 API에 기어 필드를 추가하지 않습니다. 정지 변속·브레이크 우선·페달/조향 변화와 단순화 가정은 [웹 개발 안내](../web/README.md)의 수동 조작 절에 있습니다. UI의 성공 후 P 확인은 엔진의 성공 평가와 별개입니다. #10 기록에서 원시 입력과 command를 구별하고 P 확인을 정책 평가 성공 조건으로 오인하지 마세요.
+
+### 기록 구조
+
 Header 제안: episode_id, schema_version, scenario_snapshot, scenario_version, engine_version, vehicle/sensor/evaluator version, seed, controller_kind, policy_version 또는 null, 시작 시각, consent 상태/버전, view_mode, assistance flags.
 
 Step 제안: step_index, sim_time_s, observation_t, requested_action_t, applied_command_t, next_state_truth, next_outcome, wall_timestamp. truth는 정책 학습 입력 생성 단계에서 명시적으로 제거한다.

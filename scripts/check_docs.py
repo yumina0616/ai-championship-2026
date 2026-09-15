@@ -25,6 +25,9 @@ def check(root):
     markdown_paths = list(root.glob("*.md"))
     for directory in ("docs", "examples", ".github"):
         markdown_paths.extend((root / directory).rglob("*.md"))
+    # 패키지 설명서는 검사하되 node_modules/dist는 순회하지 않습니다.
+    for directory in ("web", "engine"):
+        markdown_paths.extend((root / directory).glob("*.md"))
     for path in markdown_paths:
         markdown_count += 1
         source = path.read_text(encoding="utf-8")
@@ -44,7 +47,9 @@ def check(root):
                 errors.append(f"{path.relative_to(root)}: 저장소 밖 링크: {target}")
             elif not resolved.exists():
                 errors.append(f"{path.relative_to(root)}: 없는 파일: {target}")
-    for path in (root / "examples").rglob("*.json"):
+    json_paths = list((root / "examples").rglob("*.json"))
+    json_paths.extend((root / "web" / "public").glob("*.json"))
+    for path in json_paths:
         json_count += 1
         try:
             json.loads(path.read_text(encoding="utf-8"), parse_constant=reject_constant)
