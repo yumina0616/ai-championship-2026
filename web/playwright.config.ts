@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 const mesa = process.env.PARKSIDE_TEST_MESA === "1";
 
 export default defineConfig({
+  globalSetup: mesa ? "./tests/check-webgl.ts" : undefined,
   testDir: "./tests",
   timeout: process.env.CI ? 60_000 : 30_000,
   fullyParallel: true,
@@ -23,6 +24,7 @@ export default defineConfig({
       args: [
         "--use-gl=angle",
         mesa ? "--use-angle=gl" : "--use-angle=swiftshader",
+        ...(mesa ? ["--ignore-gpu-blocklist"] : []),
       ],
     },
     storageState:
