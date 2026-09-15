@@ -16,7 +16,9 @@ export default defineConfig({
       sources: true,
     },
     screenshot: "only-on-failure",
-    launchOptions: { args: ["--enable-unsafe-swiftshader"] },
+    launchOptions: {
+      args: ["--use-gl=angle", "--use-angle=swiftshader"],
+    },
     storageState:
       process.env.CI || process.env.PARKSIDE_TEST_LOW
         ? {
