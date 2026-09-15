@@ -26,6 +26,10 @@ CI는 3개의 독립 shard에서 각 1 worker로 **전체** Playwright 테스트
 
 CI에서는 공개된 성능 우선 옵션을 localStorage 초기 상태로 선택합니다. 엔진을 mock하거나 센서·충돌·기록 검사를 끄지 않습니다. 고화질 전환도 별도 테스트로 검사합니다. 같은 시험을 로컬에서 재현할 때 `CI=1` 대신 `PARKSIDE_TEST_LOW=1`을 쓰면 기존 로컬 dev server를 재사용할 수 있습니다.
 
+Ubuntu CI는 Xvfb + Mesa llvmpipe에서 실제 Chromium을 실행합니다. headless SwiftShader에서 관측된 입력/렌더링 지연을 분리하기 위한 테스트 실행 환경이며 제품 코드·물리 dt·판정 조건은 바꾸지 않습니다. 드라이버 정보는 `glxinfo -B` 로그로 확인합니다. Linux 재현 명령은 [개발 규칙](development.md#브라우저-ci-실패를-다룰-때)을 따릅니다.
+
+Trace의 연속 화면 캡처만 끄고 DOM·네트워크·소스 trace와 실패 screenshot은 유지합니다. 새 캡처는 OS별 임시 절대 경로 대신 `test.info().outputPath(...)`에 저장합니다. 기존 PR에 도입된 macOS 전용 캡처 경로도 이 방식으로 수정했습니다.
+
 기존 10분 단일 job은 Ubuntu 소프트웨어 WebGL 상태에서 브라우저 구간이 시간 초과되어 취소됐습니다. 로컬 통과와 원격 CI 통과를 구별하며, 단순 timeout만으로 테스트를 삭제하거나 성공 처리하지 않습니다. 실제 CI 결과는 각 PR check를 확인합니다.
 
 ## 검증의 한계
