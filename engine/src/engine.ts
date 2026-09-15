@@ -1,10 +1,14 @@
-// docs/contracts.md "엔진 인터페이스" 절의 reset()/step() 구현. #5 범위: 차량 제어 + 충돌 + timeout.
-// 센서 관측(#7)과 성공 판정(#9)은 아직 없다 — evaluateOutcome()의 순서(충돌 우선)만 미리 맞춰둔다.
+// docs/contracts.md "엔진 인터페이스" 절의 reset()/step() 구현.
+// #5(차량·충돌) + #7(센서·목표 상대좌표) 범위. 성공 판정(#9)은 evaluateOutcome()에 자리만 비워뒀다.
 import { clampCommand, integrateBicycleModel } from "./vehicle.js";
 import { footprintCollides, footprintOutOfBounds } from "./collision.js";
+import { computeSensorScan } from "./sensor.js";
+import { computeGoalRelative } from "./goal.js";
+import { createRng } from "./rng.js";
 import {
   EngineError,
   type Command,
+  type Observation,
   type Outcome,
   type Pose,
   type Scenario,
@@ -21,9 +25,12 @@ export class ParkingEngine {
   private simTimeS = 0;
   private lastAppliedCommand: Command = ZERO_COMMAND;
   private terminated = false;
+  private rng: () => number = createRng(0);
+  private lastSensorUpdateSimTimeS = -Infinity;
+  private cachedSensorScan: Observation["sensors"] = [];
 
   /** 검증된 scenario로 새 episode를 시작한다. 실패 시 값을 반환하지 않고 throw한다. */
-  reset(scenario: Scenario): Pose {
+  reset(scenario: Scenario): Observation {
     assertFinite(scenario);
     if (
       footprintCollides(scenario.start, scenario.vehicle, scenario.obstacles) ||
@@ -40,7 +47,11 @@ export class ParkingEngine {
     this.simTimeS = 0;
     this.lastAppliedCommand = ZERO_COMMAND;
     this.terminated = false;
-    return { ...this.pose };
+    this.rng = createRng(scenario.seed ?? 0);
+    this.lastSensorUpdateSimTimeS = -Infinity; // 첫 관측은 항상 새로 계산
+    this.cachedSensorScan = [];
+
+    return this.buildObservation(scenario);
   }
 
   /** command 1개를 dt만큼 적용한다. reset() 전이거나 이미 종료된 episode면 throw한다. */
@@ -73,10 +84,33 @@ export class ParkingEngine {
     if (outcome.terminated) this.terminated = true;
 
     return {
-      pose: { ...this.pose },
+      observation: this.buildObservation(scenario),
+      poseTruth: { ...this.pose },
       appliedCommand,
       simTimeS: this.simTimeS,
       outcome,
+    };
+  }
+
+  private buildObservation(scenario: Scenario): Observation {
+    const dueForUpdate =
+      this.simTimeS - this.lastSensorUpdateSimTimeS >= scenario.sensor.periodS - 1e-9;
+    if (dueForUpdate) {
+      this.cachedSensorScan = computeSensorScan(
+        this.pose,
+        scenario.sensor,
+        scenario.obstacles,
+        this.simTimeS,
+        this.rng
+      );
+      this.lastSensorUpdateSimTimeS = this.simTimeS;
+    }
+
+    return {
+      sensors: this.cachedSensorScan,
+      speedMps: this.lastAppliedCommand.targetSpeedMps,
+      steeringRad: this.lastAppliedCommand.targetSteeringRad,
+      goalRelative: computeGoalRelative(this.pose, scenario.goalPose),
     };
   }
 
@@ -110,6 +144,18 @@ function assertFinite(scenario: Scenario): void {
     scenario.bounds.maxX,
     scenario.bounds.minY,
     scenario.bounds.maxY,
+    scenario.sensor.poseVehicle.xM,
+    scenario.sensor.poseVehicle.yM,
+    scenario.sensor.poseVehicle.yawRad,
+    scenario.sensor.rayCount,
+    scenario.sensor.angleMinRad,
+    scenario.sensor.angleIncrementRad,
+    scenario.sensor.maxRangeM,
+    scenario.sensor.periodS,
+    scenario.sensor.noiseStdM,
+    scenario.goalPose.xM,
+    scenario.goalPose.yM,
+    scenario.goalPose.yawRad,
     ...scenario.obstacles.flatMap((o) => [o.centerXM, o.centerYM, o.lengthM, o.widthM, o.yawRad]),
   ];
   if (numbers.some((n) => !Number.isFinite(n))) {

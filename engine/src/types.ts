@@ -36,6 +36,31 @@ export interface Pose {
   yawRad: number;
 }
 
+/** 차량 로컬 좌표계에 고정된 pose(예: 센서 장착 위치). +x 전방, +y 왼쪽. */
+export type VehicleLocalPose = Pose;
+
+export interface SensorSpec {
+  id: string;
+  /** 차량 로컬 좌표계 기준 장착 pose. */
+  poseVehicle: VehicleLocalPose;
+  rayCount: number;
+  angleMinRad: number;
+  angleIncrementRad: number;
+  maxRangeM: number;
+  /** 갱신 주기. 물리 dt보다 크면 그 사이 step에서는 이전 값을 그대로 반환한다. */
+  periodS: number;
+  /** 가우시안 노이즈 표준편차(m). 0이면 무잡음(기본 검증 기준). */
+  noiseStdM: number;
+}
+
+export interface RangeReading {
+  angleRad: number;
+  rangeM: number;
+  /** true: 유효한 측정(미검출 포함, 이 경우 rangeM=maxRangeM). false: 센서 결측/오류(rangeM=NaN, 0으로 오인 금지). */
+  valid: boolean;
+  updatedSimTimeS: number;
+}
+
 export interface Scenario {
   scenarioId: string;
   vehicle: VehicleSpec;
@@ -43,6 +68,19 @@ export interface Scenario {
   start: Pose;
   obstacles: RectObstacle[];
   timeoutSimS: number;
+  sensor: SensorSpec;
+  /** 목표 pose(세계 좌표). Observation에는 차량 기준 상대값으로 변환해 넣는다. */
+  goalPose: Pose;
+  /** 센서 노이즈 PRNG seed. 미지정 시 0. */
+  seed?: number;
+}
+
+export interface Observation {
+  sensors: RangeReading[];
+  speedMps: number;
+  steeringRad: number;
+  /** 차량(뒷차축) 기준 목표의 상대 pose. localization_source: simulation_ground_truth. */
+  goalRelative: Pose;
 }
 
 export interface Command {
@@ -79,7 +117,9 @@ export class EngineError extends Error {
 }
 
 export interface StepResult {
-  pose: Pose;
+  observation: Observation;
+  /** 정답 pose. 정책 입력이 아니라 기록/평가 전용 — docs/contracts.md "관측과 정답의 분리". */
+  poseTruth: Pose;
   appliedCommand: Command;
   simTimeS: number;
   outcome: Outcome;
