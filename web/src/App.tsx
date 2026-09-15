@@ -42,6 +42,7 @@ import SensorAssist, { sensorFeedback } from "./SensorAssist";
 import ParkingFeedback, { parkingMessage } from "./ParkingFeedback";
 import { chapterAt, storyChapters } from "./story";
 import MapEditor from "./MapEditor";
+import EpisodeLibrary from "./EpisodeLibrary";
 import { mapScenario, type ParkingMap } from "./maps";
 const ParkingScene = lazy(() => import("./ParkingScene"));
 
@@ -111,6 +112,7 @@ export default function App() {
   const [mode, setMode] = useState<Mode>("human");
   const [camera, setCamera] = useState<CameraMode>("orbit");
   const [sensors, setSensors] = useState(false);
+  const [sensorSound, setSensorSound] = useState(false);
   const [grid, setGrid] = useState(false);
   const [state, setState] = useState<PreviewState>("idle");
   const [error, setError] = useState("");
@@ -150,6 +152,18 @@ export default function App() {
     [customMap],
   );
   const driving = useDriving(template, customScenario);
+  driving.context.current = {
+    viewMode: camera,
+    assistanceFlags: [
+      "parking-status",
+      "sensor-clearance",
+      "steering-return",
+      ...(sensors ? ["sensor-rays"] : []),
+      ...(grid ? ["grid"] : []),
+      ...(camera === "rear" ? ["reverse-guide"] : []),
+      ...(sensorSound ? ["sensor-sound"] : []),
+    ],
+  };
   const wheelDrag = useRef<{ id: number; x: number; value: number } | null>(
     null,
   );
@@ -859,6 +873,15 @@ export default function App() {
                   <ArrowRight size={19} />
                 </button>
               </div>
+              <p className="availability">
+                주행은 이 브라우저에 최근 5회만 보관해요. 서버 전송·학습 기여는
+                하지 않아요.
+              </p>
+              <EpisodeLibrary
+                onForget={driving.forgetEpisode}
+                latest={driving.lastEpisode}
+                error={driving.storageError}
+              />
               {mode === "mascot" && (
                 <p className="availability" role="status">
                   마스코트는 아직 운전하지 않아요. 학습한 정책을 연결한 뒤 같은
@@ -1009,6 +1032,7 @@ export default function App() {
               </button>
             </div>
             <SensorAssist
+              onSoundChange={setSensorSound}
               result={driving.result}
               scenario={driving.scenario}
               running={
@@ -1184,9 +1208,12 @@ export default function App() {
                     </button>
                   </div>
                   <small className="result-note">
-                    이번 실행의 실제 측정값 · 기록 저장/AI 비교는 아직 제공하지
-                    않아요.
+                    이번 실행의 실제 측정값 · 차고의 내 주행 기록에서 저장
+                    상태를 재생할 수 있어요. AI 비교는 아직 제공하지 않아요.
                   </small>
+                  {driving.storageError && (
+                    <p role="alert">{driving.storageError}</p>
+                  )}
                 </section>
               </div>
             )}
@@ -1467,7 +1494,7 @@ export default function App() {
               </p>
               <p>
                 지금은 직접 운전·거리 센서·결과 확인이 동작합니다. 학습된
-                마스코트, 자유 편집, 기록 기여와 비교는 개발 예정이에요. 참여
+                맵 편집과 로컬 기록 재생을 제공해요. 마스코트, 기록 기여와 비교는 개발 예정이에요. 참여
                 수가 늘었다고 모델 성능이 자동으로 좋아졌다고 표현하지 않습니다.
               </p>
               <p className="dialog-note">

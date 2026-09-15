@@ -17,6 +17,14 @@ import {
   type DriverInput,
 } from "./driver-controls";
 import type { MotionFrame } from "./motion";
+import {
+  appendStep,
+  beginEpisode,
+  finishEpisode,
+  saveEpisode,
+  type DrivingContext,
+  type LocalEpisode,
+} from "./episodes";
 
 // 렌더링과 물리가 공유하는 프리셋. UI 좌표는 (x, 높이, -y), pose는 뒷차축 기준입니다.
 export function makeScenario(template: TemplateId): Scenario {
@@ -161,6 +169,30 @@ export function useDriving(template: TemplateId, customScenario?: Scenario) {
     [template, customScenario],
   );
   const engine = useRef(new ParkingEngine());
+  const recording = useRef<LocalEpisode | null>(null);
+  const context = useRef<DrivingContext>({
+    viewMode: "follow",
+    assistanceFlags: ["parking-status", "sensor-clearance", "steering-return"],
+  });
+  const [lastEpisode, setLastEpisode] = useState<LocalEpisode | null>(null);
+  const [storageError, setStorageError] = useState("");
+  const persist = useCallback((episode: LocalEpisode) => {
+    void saveEpisode(episode).catch(() =>
+      setStorageError(
+        "로컬 기록 저장에 실패했어요. 현재 기록은 파일로 내려받을 수 있어요.",
+      ),
+    );
+  }, []);
+  const finishRecording = useCallback(
+    (reason: LocalEpisode["footer"]["terminationReason"]) => {
+      if (!recording.current) return;
+      const complete = finishEpisode(recording.current, reason);
+      recording.current = null;
+      setLastEpisode(complete);
+      persist(complete);
+    },
+    [persist],
+  );
   const inputs = useRef(new Map<string, DriverInput>());
   const motion = useRef<MotionFrame>({
     previous: null,
@@ -187,6 +219,7 @@ export function useDriving(template: TemplateId, customScenario?: Scenario) {
     setHeld([]);
   }, []);
   const reset = useCallback(() => {
+    finishRecording("user_abort");
     clearInputs();
     setActive(false);
     setPaused(false);
@@ -221,7 +254,7 @@ export function useDriving(template: TemplateId, customScenario?: Scenario) {
       );
       return false;
     }
-  }, [scenario, clearInputs]);
+  }, [scenario, clearInputs, finishRecording]);
   useEffect(() => {
     reset();
   }, [reset]);
@@ -230,11 +263,17 @@ export function useDriving(template: TemplateId, customScenario?: Scenario) {
     clearInputs();
     setPaused(true);
   }, [clearInputs]);
-  const stop = useCallback(() => {
-    motion.current.running = false;
-    clearInputs();
-    setActive(false);
-  }, [clearInputs]);
+  const stop = useCallback(
+    (reason?: "engine_error") => {
+      finishRecording(
+        reason ?? motion.current.current?.outcome.reason ?? "user_abort",
+      );
+      motion.current.running = false;
+      clearInputs();
+      setActive(false);
+    },
+    [clearInputs, finishRecording],
+  );
   const shift = useCallback(
     (next: Gear) => {
       const confirmingSuccess =
@@ -331,16 +370,29 @@ export function useDriving(template: TemplateId, customScenario?: Scenario) {
       let last: StepResult | null = null;
       try {
         while (accumulator >= FIXED_DT_S) {
-          last = engine.current.step(
-            driverCommand(
-              gearRef.current,
-              new Set(inputs.current.values()),
-              previous.current,
-              scenario.vehicle,
-              FIXED_DT_S,
-              analogSteer.current,
-            ),
+          const command = driverCommand(
+            gearRef.current,
+            new Set(inputs.current.values()),
+            previous.current,
+            scenario.vehicle,
+            FIXED_DT_S,
+            analogSteer.current,
           );
+          const before = motion.current.current!;
+          last = engine.current.step(command);
+          if (recording.current) {
+            appendStep(recording.current, before, command, last, {
+              ...context.current,
+              gear: gearRef.current,
+              inputs: [...new Set(inputs.current.values())],
+              analogSteer: analogSteer.current,
+            });
+            if (
+              recording.current.steps.length % 20 === 0 &&
+              !last.outcome.terminated
+            )
+              persist(finishEpisode(recording.current, "incomplete"));
+          }
           previous.current = last.appliedCommand;
           motion.current.previous = motion.current.current;
           motion.current.current = last;
@@ -358,7 +410,7 @@ export function useDriving(template: TemplateId, customScenario?: Scenario) {
         setFailure(
           error instanceof Error ? error.message : "주행을 중단했어요.",
         );
-        stop();
+        stop("engine_error");
         return;
       }
       frame = requestAnimationFrame(loop);
@@ -374,8 +426,12 @@ export function useDriving(template: TemplateId, customScenario?: Scenario) {
       window.removeEventListener("blur", pause);
       document.removeEventListener("visibilitychange", hidden);
     };
-  }, [active, paused, pause, stop, press, release, scenario, shift]);
+  }, [active, paused, pause, stop, press, release, scenario, shift, persist]);
   return {
+    context,
+    lastEpisode,
+    forgetEpisode: () => setLastEpisode(null),
+    storageError,
     motion,
     parkingStatus: engine.current.getParkingStatus(),
     scenario,
@@ -397,7 +453,16 @@ export function useDriving(template: TemplateId, customScenario?: Scenario) {
       analogSteer.current = active && !paused ? value : null;
     },
     start: () => {
-      if (reset()) setActive(true);
+      if (reset()) {
+        setStorageError("");
+        recording.current = beginEpisode(
+          scenario,
+          motion.current.current!,
+          context.current,
+        );
+        persist(finishEpisode(recording.current, "incomplete"));
+        setActive(true);
+      }
     },
     resume: () => {
       clearInputs();

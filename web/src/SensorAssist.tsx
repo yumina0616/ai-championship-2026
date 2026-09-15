@@ -67,17 +67,23 @@ export default function SensorAssist({
   scenario,
   running,
   details,
+  onSoundChange,
 }: {
   result: StepResult | null;
   scenario: Scenario;
   running: boolean;
   details: boolean;
+  onSoundChange?: (enabled: boolean) => void;
 }) {
   const feedback = sensorFeedback(result, scenario);
   const latest = useRef(feedback.nearest);
   latest.current = feedback.nearest;
   const context = useRef<AudioContext | null>(null);
   const [sound, setSound] = useState(false);
+  useEffect(() => {
+    onSoundChange?.(sound);
+    return () => onSoundChange?.(false);
+  }, [sound, onSoundChange]);
   const [audioError, setAudioError] = useState(false);
   useEffect(
     () => () => {

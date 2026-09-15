@@ -147,9 +147,15 @@ export function mapError(map: ParkingMap) {
     return e instanceof Error ? e.message : "맵을 확인해주세요.";
   }
 }
-export function downloadJson(value: unknown, filename: string) {
+export function downloadJson(
+  value: unknown,
+  filename: string,
+  compact = false,
+) {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
+    new Blob([JSON.stringify(value, null, compact ? undefined : 2)], {
+      type: "application/json",
+    }),
   );
   const a = document.createElement("a");
   a.href = url;
