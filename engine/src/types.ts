@@ -1,4 +1,4 @@
-// docs/contracts.md 기준 타입. #5 범위(차량·충돌)만 다루며 센서(#7)는 포함하지 않는다.
+// docs/contracts.md 기준 타입. #5(차량·충돌)·#7(센서·목표좌표)·#9(성공 판정) 범위.
 
 export interface VehicleSpec {
   wheelbaseM: number;
@@ -28,6 +28,17 @@ export interface WorldBounds {
   maxX: number;
   minY: number;
   maxY: number;
+}
+
+/** 회전한 직사각형(장애물/목표 공간/차량 footprint가 모두 이 모양). collision.ts가 소비한다. */
+export interface OrientedRect {
+  centerXM: number;
+  centerYM: number;
+  /** 로컬 +x(전방) 방향 전체 길이 */
+  lengthM: number;
+  /** 로컬 +y(왼쪽) 방향 전체 폭 */
+  widthM: number;
+  yawRad: number;
 }
 
 export interface Pose {
@@ -61,8 +72,20 @@ export interface RangeReading {
   updatedSimTimeS: number;
 }
 
+export interface SuccessCriteria {
+  positionToleranceM: number;
+  yawToleranceRad: number;
+  stoppedSpeedMps: number;
+  holdTimeS: number;
+  requireFootprintInsideGoal: boolean;
+  /** 우리 엔진은 항상 충돌 우선 종료를 쓴다 — 계약값을 그대로 보존해 fixture와 불일치를 감지한다. */
+  collisionTerminates: boolean;
+}
+
 export interface Scenario {
   scenarioId: string;
+  /** train/validation/heldout을 프레임이 아니라 맵 단위로 나누기 위한 레이아웃군 키. 미지정 시 scenarioId를 쓴다. */
+  layoutGroup?: string;
   vehicle: VehicleSpec;
   bounds: WorldBounds;
   start: Pose;
@@ -71,6 +94,9 @@ export interface Scenario {
   sensor: SensorSpec;
   /** 목표 pose(세계 좌표). Observation에는 차량 기준 상대값으로 변환해 넣는다. */
   goalPose: Pose;
+  /** 목표 공간(세계 좌표 회전 직사각형). 성공 판정의 "차체가 포함되는가" 검사에 쓴다. */
+  goalSpace: OrientedRect;
+  successCriteria: SuccessCriteria;
   /** 센서 노이즈 PRNG seed. 미지정 시 0. */
   seed?: number;
 }
@@ -123,4 +149,54 @@ export interface StepResult {
   appliedCommand: Command;
   simTimeS: number;
   outcome: Outcome;
+}
+
+// --- Episode (docs/contracts.md "Episode" 절) ---
+
+export type ControllerKind = "human" | "planner" | "learned" | "mock";
+
+export interface EpisodeHeader {
+  episodeId: string;
+  schemaVersion: string;
+  scenarioSnapshot: Scenario;
+  scenarioVersion: string;
+  engineVersion: string;
+  seed: number;
+  controllerKind: ControllerKind;
+  policyVersion: string | null;
+  startedAt: string;
+  consent: { status: "not_requested" | "granted" | "declined"; version: string | null };
+  viewMode: string;
+  assistanceFlags: string[];
+  /** planner/learned가 truth(전체 장애물 좌표·절대 pose 등)에 접근했는지 명시 — #9 요구사항. */
+  metadata: { plannerUsesTruth: boolean };
+}
+
+export interface EpisodeStep {
+  stepIndex: number;
+  simTimeS: number;
+  observationT: Observation;
+  requestedActionT: Command;
+  appliedCommandT: Command;
+  nextStateTruth: Pose;
+  nextOutcome: Outcome;
+  wallTimestamp: string;
+}
+
+export interface EpisodeFooter {
+  terminationReason: TerminationReason | "incomplete";
+  totalSimTimeS: number;
+  distanceTraveledM: number;
+  directionChanges: number;
+  collided: boolean;
+  finalPositionErrorM: number | null;
+  finalYawErrorRad: number | null;
+  success: boolean;
+  logComplete: boolean;
+}
+
+export interface Episode {
+  header: EpisodeHeader;
+  steps: EpisodeStep[];
+  footer: EpisodeFooter;
 }

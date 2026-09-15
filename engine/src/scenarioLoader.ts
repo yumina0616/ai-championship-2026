@@ -16,7 +16,16 @@ export interface ScenarioJson {
   };
   world: { bounds: { min_x: number; max_x: number; min_y: number; max_y: number } };
   start: { x_m: number; y_m: number; yaw_rad: number };
-  goal: { pose: { x_m: number; y_m: number; yaw_rad: number } };
+  goal: {
+    pose: { x_m: number; y_m: number; yaw_rad: number };
+    space: {
+      center_x_m: number;
+      center_y_m: number;
+      length_m: number;
+      width_m: number;
+      yaw_rad: number;
+    };
+  };
   obstacles: Array<{
     id: string;
     center_x_m: number;
@@ -34,7 +43,15 @@ export interface ScenarioJson {
     period_s: number;
     noise_std_m: number;
   };
-  evaluation: { timeout_sim_s: number };
+  evaluation: {
+    timeout_sim_s: number;
+    position_tolerance_m: number;
+    yaw_tolerance_rad: number;
+    stopped_speed_mps: number;
+    hold_time_s: number;
+    require_footprint_inside_goal: boolean;
+    collision_terminates: boolean;
+  };
 }
 
 export function loadScenarioFromJson(json: ScenarioJson): Scenario {
@@ -87,6 +104,21 @@ export function loadScenarioFromJson(json: ScenarioJson): Scenario {
       xM: json.goal.pose.x_m,
       yM: json.goal.pose.y_m,
       yawRad: json.goal.pose.yaw_rad,
+    },
+    goalSpace: {
+      centerXM: json.goal.space.center_x_m,
+      centerYM: json.goal.space.center_y_m,
+      lengthM: json.goal.space.length_m,
+      widthM: json.goal.space.width_m,
+      yawRad: json.goal.space.yaw_rad,
+    },
+    successCriteria: {
+      positionToleranceM: json.evaluation.position_tolerance_m,
+      yawToleranceRad: json.evaluation.yaw_tolerance_rad,
+      stoppedSpeedMps: json.evaluation.stopped_speed_mps,
+      holdTimeS: json.evaluation.hold_time_s,
+      requireFootprintInsideGoal: json.evaluation.require_footprint_inside_goal,
+      collisionTerminates: json.evaluation.collision_terminates,
     },
     seed: json.seed,
   };

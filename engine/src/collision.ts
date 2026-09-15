@@ -1,16 +1,8 @@
 // 회전 직사각형(OBB) vs OBB 충돌 판정 (Separating Axis Theorem).
 // docs/contracts.md: footprint는 뒷차축 기준 뒤로 rear_overhang, 앞으로 wheelbase+front_overhang.
-import type { Pose, RectObstacle, VehicleSpec, WorldBounds } from "./types.js";
+import type { OrientedRect, Pose, RectObstacle, VehicleSpec, WorldBounds } from "./types.js";
 
-export interface OrientedRect {
-  centerXM: number;
-  centerYM: number;
-  /** 차량 로컬 +x(전방) 방향 전체 길이 */
-  lengthM: number;
-  /** 차량 로컬 +y(왼쪽) 방향 전체 폭 */
-  widthM: number;
-  yawRad: number;
-}
+export type { OrientedRect } from "./types.js";
 
 type Vec2 = readonly [number, number];
 
@@ -91,6 +83,21 @@ export function footprintCollides(
   );
 }
 
+function pointInRect(pointXM: number, pointYM: number, rect: OrientedRect): boolean {
+  const dx = pointXM - rect.centerXM;
+  const dy = pointYM - rect.centerYM;
+  const cos = Math.cos(-rect.yawRad);
+  const sin = Math.sin(-rect.yawRad);
+  const localX = dx * cos - dy * sin;
+  const localY = dx * sin + dy * cos;
+  return Math.abs(localX) <= rect.lengthM / 2 && Math.abs(localY) <= rect.widthM / 2;
+}
+
+/** inner의 네 꼭짓점이 모두 outer 안에 있는지(완전 포함). #9 성공 판정의 "차체가 목표 공간에 포함"에 쓴다. */
+export function rectFullyInside(inner: OrientedRect, outer: OrientedRect): boolean {
+  return corners(inner).every(([x, y]) => pointInRect(x, y, outer));
+}
+
 export function footprintOutOfBounds(
   pose: Pose,
   vehicle: VehicleSpec,
@@ -100,4 +107,12 @@ export function footprintOutOfBounds(
   return corners(footprint).some(
     ([x, y]) => x < bounds.minX || x > bounds.maxX || y < bounds.minY || y > bounds.maxY
   );
+}
+
+export function footprintFullyInsideGoal(
+  pose: Pose,
+  vehicle: VehicleSpec,
+  goalSpace: OrientedRect
+): boolean {
+  return rectFullyInside(vehicleFootprint(pose, vehicle), goalSpace);
 }
