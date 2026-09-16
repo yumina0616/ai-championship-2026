@@ -26,3 +26,4 @@ training/data/
 *.mcap
 test-results/
 playwright-report/
+.vite/

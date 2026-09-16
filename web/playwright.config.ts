@@ -11,7 +11,8 @@ export default defineConfig({
   use: {
     headless: !mesa,
     baseURL: "http://127.0.0.1:5173",
-    // 소프트웨어 GPU의 연속 readback을 피하고 DOM/네트워크와 실패 화면은 보관합니다.
+    // 연속 WebGL 화면 readback은 소프트웨어 GPU의 입력 처리를 지연시킵니다.
+    // DOM/네트워크 trace와 실패 스크린샷은 유지합니다.
     trace: {
       mode: "retain-on-failure",
       screenshots: false,
@@ -26,6 +27,18 @@ export default defineConfig({
         ...(mesa ? ["--ignore-gpu-blocklist"] : []),
       ],
     },
+    storageState:
+      process.env.CI || process.env.PARKSIDE_TEST_LOW
+        ? {
+            cookies: [],
+            origins: [
+              {
+                origin: "http://127.0.0.1:5173",
+                localStorage: [{ name: "parkside-quality", value: "low" }],
+              },
+            ],
+          }
+        : undefined,
   },
   projects: [
     {

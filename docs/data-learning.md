@@ -1,6 +1,6 @@
 # 데이터·학습·평가 원칙
 
-상태: 설계. 수집 시스템·학습 모델·측정 결과가 아직 없습니다. 초기 학습 [#11](https://github.com/yumina0616/ai-championship-2026/issues/11), 동의/저장 [#13](https://github.com/yumina0616/ai-championship-2026/issues/13), 지속 개선 [#17](https://github.com/yumina0616/ai-championship-2026/issues/17)에서 구현합니다.
+상태: 브라우저 로컬 기록·파일 검증·상태 재생은 [로컬 기록 안내](local-episodes.md)에 구현되어 있습니다. 서버 수집 시스템·학습 모델·측정 결과는 아직 없습니다. 초기 학습 [#11](https://github.com/yumina0616/ai-championship-2026/issues/11), 기여 동의/서버 저장 [#13](https://github.com/yumina0616/ai-championship-2026/issues/13), 지속 개선 [#17](https://github.com/yumina0616/ai-championship-2026/issues/17)은 후속 범위입니다.
 
 ## 데이터는 무엇을 위한 것인가
 

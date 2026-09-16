@@ -89,6 +89,8 @@ interface EngineError {
 
 ### 기록 구조
 
+구현된 웹 기록 `parkside-episode.v1`의 구체 필드, 36 ray/1,801 step 상한, 결측 직렬화, 적용 전후 관측 정렬과 상태 재생은 [로컬 주행 기록](local-episodes.md)을 따릅니다. 기존 아래 항목은 공통 개념이며 snake_case synthetic 예시를 웹 파일 형식으로 오인하지 않습니다.
+
 Header 제안: episode_id, schema_version, scenario_snapshot, scenario_version, engine_version, vehicle/sensor/evaluator version, seed, controller_kind, policy_version 또는 null, 시작 시각, consent 상태/버전, view_mode, assistance flags.
 
 Step 제안: step_index, sim_time_s, observation_t, requested_action_t, applied_command_t, next_state_truth, next_outcome, wall_timestamp. truth는 정책 학습 입력 생성 단계에서 명시적으로 제거한다.
