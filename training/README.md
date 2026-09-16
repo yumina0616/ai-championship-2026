@@ -29,7 +29,7 @@ npm run evaluate             # model/ + data/heldout-scenarios.json -> model/eva
 - 학습: `parkside-open-v1`, `parkside-neighbors-v1`(train) + `parkside-pillar-v1`(validation) — 웹이 실제로 노출하는 세 템플릿([web/src/driving.ts](../web/src/driving.ts)) 그대로. train 1092개, validation 594개 (observation, action) 쌍.
 - heldout: `examples/scenarios/reverse-bay.v1.json`(엔진 개발용 synthetic fixture) — **성공률 0%, 충돌률 100%**(`training/model/eval-report.json`).
 - **이 실패를 숨기지 않는 이유**: heldout 시나리오는 목표 pose가 yaw=0인데 학습/검증 데이터는 전부 yaw=-90도(같은 방향 주차)였다 — 학습 데이터에 없던 종류의 회전을 요구하는, 특히 어려운 일반화 테스트다. 실제 웹 서비스가 사용자에게 보여주는 템플릿(open/neighbors/pillar)은 전부 학습·검증에 포함되어 있다. 이 결과는 "이 초기 모델은 학습 데이터와 비슷한 방향의 주차만 지원 범위"라는 뜻이며, `docs/data-learning.md`의 "결과가 나빠도 숨기지 않는다", "미평가 맵은 성능 보장하지 않는다" 원칙을 그대로 따른다.
-- 최종 train loss ≈ 0.0011, validation loss ≈ 0.0091 (`training/model/train-run.json`).
+- 현재 artifact의 최종 train loss ≈ 0.000816, validation loss ≈ 0.007073 (`training/model/train-run.json`, seed 42 재학습). 작은 지도학습 loss가 실제 폐루프 주차 성공을 보장하지는 않는다.
 
 ## 알아두면 좋은 설계 결정
 

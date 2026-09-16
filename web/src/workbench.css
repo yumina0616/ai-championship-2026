@@ -155,6 +155,29 @@
 .record-player h3 {
   font-size: 18px;
 }
+.record-player p {
+  overflow-wrap: anywhere;
+}
+.comparison-scroll {
+  overflow-x: auto;
+}
+.episode-compare table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+.episode-compare caption {
+  text-align: left;
+  margin-bottom: 1rem;
+  color: #b7efcd;
+}
+.episode-compare th,
+.episode-compare td {
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid #39433f;
+  min-width: 7rem;
+}
 .map-share {
   width: min(580px, calc(100vw - 32px));
   max-height: 85vh;

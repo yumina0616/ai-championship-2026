@@ -17,6 +17,7 @@ import {
   type DriverInput,
 } from "./driver-controls";
 import type { MotionFrame } from "./motion";
+import type { LoadedPolicy } from "./policy-info";
 import {
   appendStep,
   beginEpisode,
@@ -173,6 +174,12 @@ export function useDriving(
     [template, customScenario],
   );
   const engine = useRef(new ParkingEngine());
+  const policy = useRef<LoadedPolicy | null>(null);
+  const disposePolicy = useCallback(() => {
+    policy.current?.dispose();
+    policy.current = null;
+  }, []);
+  useEffect(() => disposePolicy, [disposePolicy]);
   const recording = useRef<LocalEpisode | null>(null);
   const context = useRef<DrivingContext>({
     viewMode: "follow",
@@ -224,6 +231,7 @@ export function useDriving(
   }, []);
   const reset = useCallback(() => {
     finishRecording("user_abort");
+    disposePolicy();
     clearInputs();
     setActive(false);
     setPaused(false);
@@ -258,7 +266,7 @@ export function useDriving(
       );
       return false;
     }
-  }, [scenario, clearInputs, finishRecording]);
+  }, [scenario, clearInputs, finishRecording, disposePolicy]);
   useEffect(() => {
     reset();
   }, [reset]);
@@ -268,18 +276,20 @@ export function useDriving(
     setPaused(true);
   }, [clearInputs]);
   const stop = useCallback(
-    (reason?: "engine_error") => {
+    (reason?: "engine_error" | "policy_error") => {
       finishRecording(
         reason ?? motion.current.current?.outcome.reason ?? "user_abort",
       );
       motion.current.running = false;
+      disposePolicy();
       clearInputs();
       setActive(false);
     },
-    [clearInputs, finishRecording],
+    [clearInputs, finishRecording, disposePolicy],
   );
   const shift = useCallback(
     (next: Gear) => {
+      if (policy.current) return false;
       const confirmingSuccess =
         next === "P" && motion.current.current?.outcome.reason === "success";
       if (!confirmingSuccess && !canShift(previous.current.targetSpeedMps)) {
@@ -307,7 +317,7 @@ export function useDriving(
   );
   const press = useCallback(
     (input: DriverInput, source: string = input) => {
-      if (!active || paused) return;
+      if (!active || paused || policy.current) return;
       if (inputs.current.has(source)) return;
       if (input === "throttle" && gearRef.current === "P")
         setMessage("P에서는 움직이지 않아요. D 또는 R을 선택해주세요.");
@@ -343,6 +353,7 @@ export function useDriving(
         e.preventDefault();
         pause();
       }
+      if (policy.current) return;
       const input = keyInput(e.code, gearRef.current);
       if (input) {
         e.preventDefault();
@@ -372,18 +383,38 @@ export function useDriving(
       accumulator += Math.min((now - lastTime) / 1000, 0.15);
       lastTime = now;
       let last: StepResult | null = null;
+      let failureKind: "engine_error" | "policy_error" = "engine_error";
       try {
         while (accumulator >= FIXED_DT_S) {
-          const command = driverCommand(
-            gearRef.current,
-            new Set(inputs.current.values()),
-            previous.current,
-            scenario.vehicle,
-            FIXED_DT_S,
-            analogSteer.current,
-          );
           const before = motion.current.current!;
+          failureKind = policy.current ? "policy_error" : "engine_error";
+          const command = policy.current
+            ? policy.current.predict(before.observation)
+            : driverCommand(
+                gearRef.current,
+                new Set(inputs.current.values()),
+                previous.current,
+                scenario.vehicle,
+                FIXED_DT_S,
+                analogSteer.current,
+              );
+          failureKind = "engine_error";
           last = engine.current.step(command);
+          if (policy.current) {
+            const next =
+              last.appliedCommand.targetSpeedMps < -0.001
+                ? "R"
+                : last.appliedCommand.targetSpeedMps > 0.001
+                  ? "D"
+                  : "P";
+            if (next !== "P") {
+              if (lastDriveGear.current && lastDriveGear.current !== next)
+                setShifts((n) => n + 1);
+              lastDriveGear.current = next;
+            }
+            gearRef.current = next;
+            setGear(next);
+          }
           if (recording.current) {
             appendStep(recording.current, before, command, last, {
               ...context.current,
@@ -414,7 +445,7 @@ export function useDriving(
         setFailure(
           error instanceof Error ? error.message : "주행을 중단했어요.",
         );
-        stop("engine_error");
+        stop(failureKind);
         return;
       }
       frame = requestAnimationFrame(loop);
@@ -454,21 +485,26 @@ export function useDriving(
     press,
     release,
     steer: (value: number | null) => {
-      analogSteer.current = active && !paused ? value : null;
+      analogSteer.current = active && !paused && !policy.current ? value : null;
     },
-    start: () => {
+    start: (loaded: LoadedPolicy | null = null) => {
       if (reset()) {
+        policy.current = loaded;
         setStorageError("");
         if (recordLocally) {
           recording.current = beginEpisode(
             scenario,
             motion.current.current!,
             context.current,
+            loaded?.version ?? null,
           );
           persist(finishEpisode(recording.current, "incomplete"));
         }
         setActive(true);
+        return true;
       }
+      loaded?.dispose();
+      return false;
     },
     resume: () => {
       clearInputs();

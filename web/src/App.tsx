@@ -42,8 +42,11 @@ import SensorAssist, { sensorFeedback } from "./SensorAssist";
 import ParkingFeedback, { parkingMessage } from "./ParkingFeedback";
 import { chapterAt, storyChapters } from "./story";
 import MapEditor from "./MapEditor";
+import SharedMap from "./SharedMap";
+import LocalContributionTest from "./LocalContributionTest";
 import EpisodeLibrary from "./EpisodeLibrary";
 import { mapScenario, type ParkingMap } from "./maps";
+import { POLICY_LABEL, type LoadedPolicy } from "./policy-info";
 const ParkingScene = lazy(() => import("./ParkingScene"));
 
 function Logo() {
@@ -109,6 +112,7 @@ export default function App() {
   const [view, setView] = useState<"landing" | "drive">("landing");
   const [template, setTemplate] = useState<TemplateId>("open");
   const [customMap, setCustomMap] = useState<ParkingMap | null>(null);
+  const [editorRevision, setEditorRevision] = useState(0);
   const [recordLocally, setRecordLocally] = useState(() => {
     try {
       return localStorage.getItem("parkside-record-locally") !== "off";
@@ -171,15 +175,18 @@ export default function App() {
   const driving = useDriving(template, customScenario, recordLocally);
   driving.context.current = {
     viewMode: camera,
-    assistanceFlags: [
-      "parking-status",
-      "sensor-clearance",
-      "steering-return",
-      ...(sensors ? ["sensor-rays"] : []),
-      ...(grid ? ["grid"] : []),
-      ...(camera === "rear" ? ["reverse-guide"] : []),
-      ...(sensorSound ? ["sensor-sound"] : []),
-    ],
+    assistanceFlags:
+      mode === "mascot"
+        ? ["spectator"]
+        : [
+            "parking-status",
+            "sensor-clearance",
+            "steering-return",
+            ...(sensors ? ["sensor-rays"] : []),
+            ...(grid ? ["grid"] : []),
+            ...(camera === "rear" ? ["reverse-guide"] : []),
+            ...(sensorSound ? ["sensor-sound"] : []),
+          ],
   };
   const wheelDrag = useRef<{ id: number; x: number; value: number } | null>(
     null,
@@ -207,7 +214,10 @@ export default function App() {
   const speed = Math.abs((observation?.speedMps ?? 0) * 3.6);
   const ended = driving.result?.outcome.reason;
   const parkConfirm =
-    state === "ready" && ended === "success" && driving.gear !== "P";
+    mode === "human" &&
+    state === "ready" &&
+    ended === "success" &&
+    driving.gear !== "P";
   const positionError = observation
     ? Math.hypot(observation.goalRelative.xM, observation.goalRelative.yM)
     : 0;
@@ -219,7 +229,8 @@ export default function App() {
       .filter((r) => r.valid && Number.isFinite(r.rangeM))
       .map((r) => r.rangeM) ?? [];
   const nearest = ranges.length ? Math.min(...ranges) : null;
-  const controlsDisabled = state !== "ready" || driving.paused || !!ended;
+  const controlsDisabled =
+    mode === "mascot" || state !== "ready" || driving.paused || !!ended;
   const staticStory = reduceMotion || motionPaused;
   const chapter = staticStory ? 0 : chapterAt(storyProgress);
   const storySensor = sensorFeedback(driving.result, driving.scenario);
@@ -329,7 +340,6 @@ export default function App() {
 
   async function start() {
     if (state === "loading") return;
-    setMode("human");
     if (state === "error") setSceneRevision((n) => n + 1);
     setIntroDismissed(true);
     setOpening(false);
@@ -348,6 +358,7 @@ export default function App() {
     driving.reset();
     window.scrollTo({ top: 0, behavior: "instant" });
     const timeout = window.setTimeout(() => controller.abort("timeout"), 8000);
+    let loaded: LoadedPolicy | null = null;
     try {
       if (cinematicEntry) {
         await new Promise<void>((resolve) => window.setTimeout(resolve, 320));
@@ -357,6 +368,10 @@ export default function App() {
         setDeparting(false);
       }
       await loadPreview(controller.signal);
+      if (mode === "mascot") {
+        const { loadPolicy } = await import("./policy");
+        loaded = await loadPolicy(driving.scenario, controller.signal);
+      }
       if (cinematicEntry && !controller.signal.aborted) {
         await new Promise<void>((resolve) => {
           const done = () => {
@@ -373,19 +388,24 @@ export default function App() {
       }
       if (id === requestId.current) {
         if (controller.signal.aborted) throw Error("진입이 취소됐어요.");
-        driving.start();
+        const started = driving.start(loaded);
+        loaded = null; // 성공/실패 모두 driving.start가 소유권을 받는다.
+        if (!started) throw Error("주차장 초기화에 실패했어요.");
         setState("ready");
       }
-    } catch {
+    } catch (cause) {
       if (id === requestId.current) {
         setError(
           controller.signal.reason === "timeout"
             ? "응답이 늦어지고 있어요. 다시 시도해주세요."
-            : "실행 리소스를 불러오지 못했어요. 인터넷 연결을 확인해주세요.",
+            : mode === "mascot" && cause instanceof Error
+              ? cause.message
+              : "실행 리소스를 불러오지 못했어요. 인터넷 연결을 확인해주세요.",
         );
         setState("error");
       }
     } finally {
+      loaded?.dispose();
       window.clearTimeout(timeout);
     }
   }
@@ -765,7 +785,7 @@ export default function App() {
                     <p>{item.description}</p>
                   </article>
                 ))}
-                <p>개발용 차량 · 무잡음 가상 거리 센서 · 학습 정책 연결 예정</p>
+                <p>개발용 차량 · 무잡음 가상 거리 센서 · 실험용 학습 정책</p>
               </section>
             )}
             <div className="play-ribbon" aria-hidden="true">
@@ -839,7 +859,15 @@ export default function App() {
                   </label>
                 ))}
               </fieldset>
+              <SharedMap
+                onApply={(map) => {
+                  setCustomMap(map);
+                  setOpening(false);
+                  setEditorRevision((n) => n + 1);
+                }}
+              />
               <MapEditor
+                key={editorRevision}
                 template={template}
                 initialMap={customMap}
                 onApply={(map) => {
@@ -880,16 +908,16 @@ export default function App() {
                       checked={mode === "mascot"}
                       onChange={() => setMode("mascot")}
                     />
-                    마스코트 <small>준비 중</small>
+                    마스코트 <small>실험 모델</small>
                   </label>
                 </fieldset>
                 <button
                   ref={garageStart}
                   className="button orange"
-                  disabled={mode === "mascot"}
+                  disabled={state === "loading"}
                   onClick={start}
                 >
-                  {mode === "human" ? "이 공간에서 시작" : "학습 모델 준비 중"}
+                  {mode === "human" ? "이 공간에서 시작" : "마스코트 운전 보기"}
                   <ArrowRight size={19} />
                 </button>
               </div>
@@ -954,10 +982,13 @@ export default function App() {
                 latest={driving.lastEpisode}
                 error={driving.storageError}
               />
+              {import.meta.env.DEV && <LocalContributionTest />}
               {mode === "mascot" && (
                 <p className="availability" role="status">
-                  마스코트는 아직 운전하지 않아요. 학습한 정책을 연결한 뒤 같은
-                  환경에서 관찰할 수 있어요.
+                  실험 정책 {POLICY_LABEL} · 동일 차량·무잡음 36-ray 센서로
+                  실행해요. 미관측 환경 평가 0/1 성공. 편집한 맵은 미평가
+                  환경이며 충돌하거나 실패할 수 있어요. 이상적인 자기 위치를
+                  사용하며 실차 자율주행 성능을 뜻하지 않아요.
                 </p>
               )}
             </section>
@@ -970,7 +1001,7 @@ export default function App() {
                   로봇의 새로운 시선으로.
                 </h2>
                 <p>
-                  내가 직접 운전하고, 언젠가는 AI 친구도 같은 공간에 도전하고.
+                  내가 직접 운전하고, AI 친구도 같은 공간에 도전하고.
                   <br />
                   우리는 성공뿐 아니라 실패에서도 배울 수 있는 주차장을
                   만들어요.
@@ -990,8 +1021,8 @@ export default function App() {
                     <b>02</b> 결과 확인
                   </span>
                   <ArrowRight size={14} />
-                  <span className="planned">
-                    <b>03</b> AI와 비교 <small>예정</small>
+                  <span>
+                    <b>03</b> AI와 비교
                   </span>
                 </div>
               </div>
@@ -1000,9 +1031,11 @@ export default function App() {
                 <Buddy />
                 <div>
                   <strong>미래에서 온 주차 초보.</strong>
-                  <p>아직 면허 연습 중. 학습 모델 연결 예정이에요.</p>
+                  <p>아직 면허 연습 중. 실험 모델의 실패와 도전을 지켜봐요.</p>
                 </div>
-                <span className="board-corner">COMING TO THE GARAGE ↗</span>
+                <span className="board-corner">
+                  LEARNED POLICY / EXPERIMENTAL ↗
+                </span>
               </div>
             </section>
             <footer className="site-footer">
@@ -1064,8 +1097,16 @@ export default function App() {
                 {customMap?.name ?? selected.title}
               </h1>
               <p>
-                <Flag size={13} /> 표시된 칸에 정차한 뒤 P로 마무리
+                <Flag size={13} />{" "}
+                {mode === "mascot"
+                  ? "LEARNED LIVE · 센서 관측으로 실제 추론 중"
+                  : "표시된 칸에 정차한 뒤 P로 마무리"}
               </p>
+              {mode === "mascot" && (
+                <p className="policy-badge">
+                  {POLICY_LABEL} · 성능 미보장 / 실패도 기록
+                </p>
+              )}
             </div>
             <div className="view-controls">
               <div className="camera-switch" aria-label="카메라 시점">
@@ -1284,7 +1325,7 @@ export default function App() {
                     {recordLocally
                       ? "차고의 내 주행 기록에서 저장 상태를 재생할 수 있어요."
                       : "로컬 기록을 꺼서 이번 주행은 보관하지 않았어요."}{" "}
-                    AI 비교는 아직 제공하지 않아요.
+                    같은 공간의 사람·마스코트 기록을 골라 비교할 수도 있어요.
                   </small>
                   {driving.storageError && (
                     <p role="alert">{driving.storageError}</p>
@@ -1411,6 +1452,7 @@ export default function App() {
                   <button
                     key={g}
                     disabled={
+                      mode === "mascot" ||
                       state !== "ready" ||
                       (!!ended && !parkConfirm) ||
                       (parkConfirm && g !== "P")
@@ -1473,8 +1515,10 @@ export default function App() {
             </div>
             <div className="cockpit-status">
               <span role="status">
-                {driving.message ||
-                  "D: ↑ 전진 · R: ↓ 후진 · 반대 방향키 제동 / W 액셀 · S 브레이크"}
+                {mode === "mascot"
+                  ? "정책이 조향·속도를 결정해요. 카메라 변경·일시정지·종료만 가능해요."
+                  : driving.message ||
+                    "D: ↑ 전진 · R: ↓ 후진 · 반대 방향키 제동 / W 액셀 · S 브레이크"}
               </span>
               <span>
                 {sensors
@@ -1568,10 +1612,10 @@ export default function App() {
                 시도와 실패를 관찰할 수 있는 참여형 주차 실험실을 만들고 있어요.
               </p>
               <p>
-                지금은 직접 운전·거리 센서·결과 확인이 동작합니다. 학습된 맵
-                편집과 로컬 기록 재생을 제공해요. 마스코트, 기록 기여와 비교는
-                개발 예정이에요. 참여 수가 늘었다고 모델 성능이 자동으로
-                좋아졌다고 표현하지 않습니다.
+                직접 운전·거리 센서·맵 편집·로컬 기록 재생과 비교를 제공해요.
+                마스코트는 실제 학습 모델로 운전하지만 초기 모델이라 실패할 수
+                있어요. 실제 사용자 기록 기여는 아직 켜지 않았어요. 참여 수가
+                늘었다고 모델 성능이 자동으로 좋아졌다고 표현하지 않습니다.
               </p>
               <p className="dialog-note">
                 PARKSIDE는 임시 이름입니다. 주행 데이터는 서버에 전송하지

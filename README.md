@@ -4,7 +4,7 @@
 
 사용자의 선택적 데이터 기여를 바탕으로 정책을 학습하고, 별도 평가를 통과한 버전만 공개하는 참여형 Physical AI 실험을 목표로 합니다. 웹 디자인의 임시 이름은 **PARKSIDE**이며 최종 서비스명과 마스코트 이름은 아직 정하지 않았습니다.
 
-> 현재 상태: 세 가지 프리셋 또는 직접 편집한 맵에서 P/R/D·드래그 핸들·페달로 실제 수동 주행을 할 수 있습니다. 차량·충돌·거리 센서·평가 엔진과 방향별 센서 HUD·선택형 경고음·후진 조향 연장선을 연결했습니다. 로컬 최근 5회 기록·탑뷰 상태 재생·맵/기록 JSON 파일 입출력을 제공합니다. 마스코트 학습 정책·기여 업로드·공개 배포는 후속 작업입니다.
+> 현재 상태: 세 가지 프리셋 또는 직접 편집한 맵에서 P/R/D·드래그 핸들·페달로 직접 운전하거나 실제 학습 모델의 운전을 볼 수 있습니다. 차량·충돌·거리 센서·평가 엔진과 센서 HUD·경고음·후진 조향 연장선을 연결했습니다. 로컬 최근 5회 기록·상태 재생·동일 환경 비교·맵 포함 링크/JSON 공유를 제공합니다. 마스코트는 실험용 초기 모델이며 소규모 heldout 성공 0/1로, 주차 성능을 보장하지 않습니다. 기여 API는 로컬 합성 데이터 테스트만 지원하며 실제 사용자 수집·공개 배포는 아직 하지 않습니다.
 
 ## 왜 만드는가
 
@@ -39,8 +39,8 @@
 - 웹: React 19.2 + TypeScript + Vite 7, React Three Fiber/Three.js와 CSS로 표현합니다. [웹 개발 안내](web/README.md)에 실행·디자인·연결 지점을 정리했습니다. 정확한 버전은 `web/package-lock.json`으로 고정합니다.
 - 엔진: [재사용 검증](docs/integration-spike.md) 결과 브라우저 실행(옵션 B)을 선택했습니다. `engine/`의 순수 TypeScript 엔진을 웹에서 직접 사용하며 ROS/Gazebo 서버는 필요하지 않습니다.
 - 실행: 고정 0.05초 step의 저속 차량 모델·차체 충돌·ray-box 가상 거리 센서·성공/충돌/timeout 판정을 사용합니다. 후진 기준 제어기와 rollout 생성도 엔진에 있지만 학습된 AI가 아니며 웹 관전 모드에 연결하지 않았습니다.
-- 학습: 기존 학습 코드 재사용 또는 작은 행동복제 기준 모델부터 검증합니다. 모델 종류·프레임워크는 아직 미확정입니다.
-- 저장·배포: 초기 공개 preview는 [#4](https://github.com/yumina0616/ai-championship-2026/issues/4), 실제 엔진 운영은 [#2](https://github.com/yumina0616/ai-championship-2026/issues/2), 기여 데이터 저장소는 [#13](https://github.com/yumina0616/ai-championship-2026/issues/13)에서 선택합니다.
+- 학습: TensorFlow.js 행동복제 MLP와 버전 있는 artifact를 제공합니다. [학습 안내](training/README.md)와 [웹 추론 경계](docs/mascot.md)에 학습/평가 분리·현재 실패 결과·지원 조건을 공개합니다.
+- 저장·배포: 개인 기록은 IndexedDB, 맵 공유는 URL fragment/파일입니다. [합성 기록 테스트 API](server/README.md)는 로컬 파일만 사용합니다. 실제 기여 저장소/정책은 [#13](https://github.com/yumina0616/ai-championship-2026/issues/13), 공개 배포·실기기·운영 검증은 [#15](https://github.com/yumina0616/ai-championship-2026/issues/15)에 남아 있습니다.
 - 검증: Python 3.11 이상 문서 검사, Node.js 22.12 이상 엔진 Vitest·타입 검사, 웹 TypeScript 빌드·Playwright Chromium 테스트를 사용합니다.
 
 모듈 책임과 실행 선택지는 [아키텍처](docs/architecture.md), 입력·출력 초안은 [공통 계약](docs/contracts.md)에 있습니다.
@@ -67,6 +67,7 @@ npm --prefix engine ci
 npm --prefix engine run typecheck
 npm --prefix engine test
 npm --prefix web run build
+npm --prefix web run test:local-api
 cd web
 npx playwright install chromium
 npm test
@@ -79,8 +80,8 @@ python3 -m unittest discover -s tests -v
 
 | 담당 | 지금 할 일 | 다음 연결 |
 | --- | --- | --- |
-| JH-9568 | 편집기·내 맵 운전·로컬 기록·파일 공유·웹 안정화를 main으로 통합 | [웹 안정화](docs/web-stability.md) 확인 후 #12 모델 연결 → #14 비교 화면, 공개 배포는 보류 |
-| yumina0616 | 차량·센서·기준 제어기 PR #21/#22/#23 main 병합 완료 | [#11](https://github.com/yumina0616/ai-championship-2026/issues/11) 학습 정책·추론 방식 결정 |
+| JH-9568 | 편집기·로컬 기록·웹 안정화, #12 실제 모델 연결 | #14 비교와 #13 로컬 기여 검증, 공개 배포는 보류 |
+| yumina0616 | 차량·센서·기준 제어기, #11 학습 모델 PR #31 main 병합 완료 | 모델 지원 범위·실패 분석과 최종 평가 검토 |
 
 전체 할당·의존 관계는 [개발 계획](docs/mvp-plan.md), 실시간 상태는 [Issues](https://github.com/yumina0616/ai-championship-2026/issues), 제출 범위는 [마일스톤](https://github.com/yumina0616/ai-championship-2026/milestone/1)에서 확인합니다.
 
@@ -96,6 +97,9 @@ python3 -m unittest discover -s tests -v
 | [웹 개발 안내](web/README.md) | UI 실행·디자인·실제 엔진 연결·배포 |
 | [맵 편집](docs/map-editor.md) | 탑뷰 배치·검증·운전 snapshot |
 | [로컬 기록](docs/local-episodes.md) | 관측/행동 정렬·상태 재생·파일 검증 |
+| [마스코트](docs/mascot.md) | 실제 모델·지원 범위·실패/취소·기록 |
+| [시도 비교](docs/comparison.md) | 동일 조건 확인·실패 포함 지표·관측 차이 |
+| [로컬 기여 API](server/README.md) | 합성 데이터만 사용하는 동의·권한·삭제 테스트 |
 | [파일 공유](docs/local-sharing.md) | 포함 항목 확인·보관 선택·삭제 |
 | [웹 안정화](docs/web-stability.md) | 품질 옵션·오류 복구·CI·PR 순서 |
 | [공통 계약](docs/contracts.md) | 좌표·제어·센서·Episode 초안 |

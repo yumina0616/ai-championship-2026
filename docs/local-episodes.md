@@ -1,6 +1,6 @@
 # 로컬 주행 기록과 상태 재생
 
-구현: #10. 차고의 **내 주행 기록**에서 목록·파일 열기·내보내기·삭제와 탑뷰 상태 재생을 제공합니다. 보관을 켜면 실제 운전의 고정 dt 0.05초마다 기록합니다. 차고에서 [로컬 보관을 끄는 선택](local-sharing.md)도 제공합니다. 재생은 저장한 state를 표시하며 엔진 step이나 AI 추론을 호출하지 않습니다. 재생 경로는 뒷차축 기준이고 UI에 human·정책 버전 없음·종료 사유를 표시합니다.
+구현: #10/#12/#14. 차고의 **내 주행 기록**에서 목록·파일 열기·내보내기·삭제와 탑뷰 상태 재생, [같은 조건의 시도 비교](comparison.md)를 제공합니다. 보관을 켜면 실제 운전의 고정 dt 0.05초마다 기록합니다. 차고에서 [로컬 보관을 끄는 선택](local-sharing.md)도 제공합니다. 재생은 저장한 state를 표시하며 엔진 step이나 AI 추론을 호출하지 않습니다. 재생 경로는 뒷차축 기준이고 UI에 human/learned·실제 정책 버전·종료 사유를 표시합니다.
 
 ## 저장 범위
 
@@ -12,11 +12,11 @@
 
 ## parkside-episode.v1
 
-엔진 `Episode` 타입에 initial StepResult와 각 step의 nextObservation/rawInput을 더한 웹 기록입니다. 기존 synthetic snake_case 예시와 다른 버전이며 이를 암묵적으로 변환하지 않습니다. 현재 human 웹 v2 프리셋/편집기 v1만 지원합니다. planner/learned 파일은 별도 계약 구현 전 거부합니다.
+엔진 `Episode` 타입에 initial StepResult와 각 step의 nextObservation/rawInput을 더한 웹 기록입니다. 기존 synthetic snake_case 예시와 다른 버전이며 이를 암묵적으로 변환하지 않습니다. 현재 human 및 [고정 모델의 learned](mascot.md) 웹 v2 프리셋/편집기 v1을 지원합니다. planner와 미지원 정책 버전은 거부합니다. learned 기록은 전체 정책 체크섬을 보존하고 수동 입력은 비어 있습니다. `policy_error`는 불완전 실패 기록입니다.
 
 | 경계 | 기록 |
 | --- | --- |
-| header | UUID, schema/engine/scenario version, 전체 Scenario snapshot(차량·센서·평가 포함), seed, human, policyVersion=null, 시작 시각, 동의 상태, 최초 시점·도움 |
+| header | UUID, schema/engine/scenario version, 전체 Scenario snapshot(차량·센서·평가 포함), seed, human/learned, policyVersion(null 또는 체크섬 포함), 시작 시각, 동의 상태, 최초 시점·도움 |
 | initial | reset 직후 관측·정답 pose·t=0 |
 | step | 연속 stepIndex, 적용 후 simTimeS, 적용 전 observationT, requestedActionT, appliedCommandT, nextStateTruth, nextObservation, nextOutcome, wallTimestamp |
 | rawInput | 기어, 페달/좌우 입력 집합, 아날로그 조향, 시점, 센서선/격자/후방 가이드/음향/주차 안내/조향 복원 도움 |

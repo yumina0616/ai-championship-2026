@@ -9,6 +9,7 @@ import {
   type LocalEpisode,
 } from "./episodes";
 import { downloadJson } from "./maps";
+import EpisodeCompare from "./EpisodeCompare";
 
 export default function EpisodeLibrary({
   latest,
@@ -21,6 +22,17 @@ export default function EpisodeLibrary({
 }) {
   const [records, setRecords] = useState<LocalEpisode[]>([]);
   const [selected, setSelected] = useState<LocalEpisode | null>(null);
+  const [comparison, setComparison] = useState<LocalEpisode[]>([]);
+  function addComparison(e: LocalEpisode) {
+    if (comparison.some((r) => r.header.episodeId === e.header.episodeId))
+      return;
+    if (comparison.length >= 2) {
+      setMessage("비교는 두 기록씩 가능해요. 먼저 A 또는 B를 빼주세요.");
+      return;
+    }
+    setComparison((rows) => [...rows, e]);
+    setMessage("");
+  }
   const [index, setIndex] = useState(0),
     [playing, setPlaying] = useState(false),
     [message, setMessage] = useState("");
@@ -107,6 +119,7 @@ export default function EpisodeLibrary({
               onForget();
               setRecords([]);
               setSelected(null);
+              setComparison([]);
               setPlaying(false);
               setMessage("로컬 기록을 삭제했어요.");
             } catch {
@@ -146,12 +159,14 @@ export default function EpisodeLibrary({
         {records.map((e) => (
           <li key={e.header.episodeId}>
             <span>
+              {e.header.controllerKind === "learned" ? "AI" : "직접 운전"} ·{" "}
               {new Date(e.header.startedAt).toLocaleString()} ·{" "}
               {e.footer.terminationReason} · {e.footer.totalSimTimeS.toFixed(1)}
               초
             </span>
             <div className="workbench-actions">
               <button onClick={() => open(e)}>기록 재생</button>
+              <button onClick={() => addComparison(e)}>비교에 추가</button>
               <button
                 onClick={() =>
                   downloadJson(
@@ -170,6 +185,11 @@ export default function EpisodeLibrary({
                     await deleteEpisode(e.header.episodeId);
                     if (latest?.header.episodeId === e.header.episodeId)
                       onForget();
+                    setComparison((rows) =>
+                      rows.filter(
+                        (r) => r.header.episodeId !== e.header.episodeId,
+                      ),
+                    );
                     setRecords((rows) =>
                       rows.filter(
                         (r) => r.header.episodeId !== e.header.episodeId,
@@ -190,11 +210,19 @@ export default function EpisodeLibrary({
           </li>
         ))}
       </ol>
+      <EpisodeCompare
+        records={comparison}
+        onRemove={(id) =>
+          setComparison((rows) => rows.filter((e) => e.header.episodeId !== id))
+        }
+      />
       {selected && frame && car && (
         <section className="record-player" aria-label="저장 상태 재생">
           <h3>기록 재생 · AI 실시간 운전 아님</h3>
           <p>
-            human · 정책 버전 없음 · {selected.footer.terminationReason} ·{" "}
+            {selected.header.controllerKind} ·{" "}
+            {selected.header.policyVersion ?? "정책 버전 없음"} ·{" "}
+            {selected.footer.terminationReason} ·{" "}
             {selected.footer.logComplete ? "정상 종료 기록" : "불완전 기록"}
           </p>
           <svg
@@ -282,6 +310,9 @@ export default function EpisodeLibrary({
             ).join(", ")}
           </p>
           <div className="workbench-actions">
+            <button onClick={() => addComparison(selected)}>
+              열린 기록 비교에 추가
+            </button>
             <button
               disabled={!selected.steps.length}
               onClick={() => {

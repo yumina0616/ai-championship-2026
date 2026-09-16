@@ -11,6 +11,7 @@ import {
 import { makeScenario } from "./driving";
 import { mapScenario, parseMap } from "./maps";
 import type { DriverInput, Gear } from "./driver-controls";
+import { POLICY_VERSION } from "./policy-info";
 
 export const EPISODE_BYTES = 16 * 1024 * 1024;
 export interface DrivingContext {
@@ -30,7 +31,10 @@ export interface LocalEpisode extends Omit<Episode, "steps" | "footer"> {
   initial: StepResult;
   steps: RecordedStep[];
   footer: Omit<Episode["footer"], "terminationReason"> & {
-    terminationReason: Episode["footer"]["terminationReason"] | "engine_error";
+    terminationReason:
+      | Episode["footer"]["terminationReason"]
+      | "engine_error"
+      | "policy_error";
   };
 }
 export const contextFlags = [
@@ -41,12 +45,16 @@ export const contextFlags = [
   "reverse-guide",
   "steering-return",
   "sensor-sound",
+  "spectator",
 ];
 export function beginEpisode(
   scenario: Scenario,
   initial: StepResult,
   context: DrivingContext,
+  policyVersion: string | null = null,
 ): LocalEpisode {
+  if (policyVersion !== null && policyVersion !== POLICY_VERSION)
+    throw Error("지원하지 않는 정책 버전이에요.");
   return {
     header: {
       episodeId: crypto.randomUUID(),
@@ -55,8 +63,8 @@ export function beginEpisode(
       scenarioVersion: scenario.scenarioId,
       engineVersion: "browser-kinematic-ts.v1",
       seed: scenario.seed ?? 0,
-      controllerKind: "human",
-      policyVersion: null,
+      controllerKind: policyVersion ? "learned" : "human",
+      policyVersion,
       startedAt: new Date().toISOString(),
       consent: { status: "not_requested", version: null },
       viewMode: context.viewMode,
@@ -130,7 +138,9 @@ export function episodeFooter(
     finalPositionErrorM: Math.hypot(goal.xM, goal.yM),
     finalYawErrorRad: Math.abs(goal.yawRad),
     success: reason === "success",
-    logComplete: reason !== "incomplete" && reason !== "engine_error",
+    logComplete: !["incomplete", "engine_error", "policy_error"].includes(
+      String(reason),
+    ),
   };
 }
 export function finishEpisode(
@@ -182,6 +192,23 @@ function equal(a: unknown, b: unknown): boolean {
     );
   }
   return Object.is(a, b);
+}
+
+export function comparisonError(
+  a: LocalEpisode,
+  b: LocalEpisode,
+): string | null {
+  if (a.header.episodeId === b.header.episodeId)
+    return "서로 다른 두 기록을 선택해주세요.";
+  if (
+    a.header.engineVersion !== b.header.engineVersion ||
+    a.header.scenarioVersion !== b.header.scenarioVersion ||
+    a.header.seed !== b.header.seed ||
+    !equal(a.header.scenarioSnapshot, b.header.scenarioSnapshot) ||
+    !equal(a.initial, b.initial)
+  )
+    return "환경·차량·센서·평가·seed 또는 초기 상태가 달라 경로 비교를 할 수 없어요.";
+  return null;
 }
 function readPose(v: unknown): Pose {
   const p = obj(v);
@@ -292,8 +319,10 @@ export function parseEpisode(text: string): LocalEpisode {
     h.engineVersion !== "browser-kinematic-ts.v1" ||
     h.scenarioVersion !== scenario.scenarioId ||
     h.seed !== (scenario.seed ?? 0) ||
-    h.controllerKind !== "human" ||
-    h.policyVersion !== null ||
+    !(
+      (h.controllerKind === "human" && h.policyVersion === null) ||
+      (h.controllerKind === "learned" && h.policyVersion === POLICY_VERSION)
+    ) ||
     !equal(h.consent, { status: "not_requested", version: null }) ||
     !equal(h.metadata, { plannerUsesTruth: false }) ||
     typeof h.episodeId !== "string" ||
@@ -310,7 +339,12 @@ export function parseEpisode(text: string): LocalEpisode {
     };
   if (!equal(initial.poseTruth, scenario.start) || initial.outcome.terminated)
     return fail();
-  const e = beginEpisode(scenario, initial, context(h));
+  const e = beginEpisode(
+    scenario,
+    initial,
+    context(h),
+    h.policyVersion as string | null,
+  );
   e.header.episodeId = h.episodeId;
   e.header.startedAt = timestamp(h.startedAt);
   if (!Array.isArray(r.steps) || r.steps.length > 1801) return fail();
@@ -332,6 +366,11 @@ export function parseEpisode(text: string): LocalEpisode {
       !raw.inputs.every((k) =>
         ["throttle", "brake", "left", "right"].includes(String(k)),
       )
+    )
+      return fail();
+    if (
+      h.controllerKind === "learned" &&
+      (raw.inputs.length !== 0 || raw.analogSteer !== null)
     )
       return fail();
     const obs = observation(s.observationT, previous.simTimeS),
@@ -369,10 +408,14 @@ export function parseEpisode(text: string): LocalEpisode {
       "user_abort",
       "incomplete",
       "engine_error",
+      "policy_error",
     ].includes(String(reason)) ||
     (previous.outcome.terminated
       ? previous.outcome.reason !== reason
-      : !["user_abort", "incomplete", "engine_error"].includes(String(reason)))
+      : !["user_abort", "incomplete", "engine_error", "policy_error"].includes(
+          String(reason),
+        )) ||
+    (reason === "policy_error" && h.controllerKind !== "learned")
   )
     return fail();
   const expected = episodeFooter(e, reason);

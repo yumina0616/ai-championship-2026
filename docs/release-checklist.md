@@ -1,6 +1,6 @@
 # 공개 배포·제출 체크리스트
 
-담당: JH-9568 / yumina0616 공동, Issue [#15](https://github.com/yumina0616/ai-championship-2026/issues/15). 체크는 실제 검증한 뒤 채웁니다. 현재는 모두 미검증입니다.
+담당: JH-9568 / yumina0616 공동, Issue [#15](https://github.com/yumina0616/ai-championship-2026/issues/15). 체크는 실제 검증한 뒤 채웁니다. 아래는 **공개 배포 최종 확인표**이므로 로컬 자동 테스트 통과만으로 체크하지 않습니다. 로컬 구현/검증과 남은 결정은 [배포 전 인수인계](pre-deploy.md)를 참고하세요.
 
 ## 실제 기능
 
