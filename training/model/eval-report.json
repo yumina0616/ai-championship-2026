@@ -1,0 +1,27 @@
+{
+  "evaluatedAt": "2026-09-16T06:56:36.747Z",
+  "codeCommit": "46ba32fe0cf6e75d55e7fc67d8102dcd2134dd4a",
+  "heldoutScenarioCount": 1,
+  "successRate": 0,
+  "collisionRate": 1,
+  "timeoutRate": 0,
+  "perScenario": [
+    {
+      "scenarioId": "synthetic-reverse-bay",
+      "terminationReason": "collision",
+      "success": false,
+      "collided": true,
+      "timedOut": false,
+      "stepCount": 88,
+      "finalPositionErrorM": 4.274935725521424,
+      "finalYawErrorRad": 0.610173441548961,
+      "totalSimTimeS": 4.399999999999992
+    }
+  ],
+  "limitations": [
+    "heldout scenario가 1개뿐이라 이 비율은 통계적으로 일반화할 수 없다 — docs/data-learning.md의 경고 그대로.",
+    "학습 데이터(parkside-open-v1, parkside-neighbors-v1)와 검증 데이터(parkside-pillar-v1)는 목표 pose가 모두 yaw=-90도(같은 방향 주차)인데, heldout(synthetic-reverse-bay)은 yaw=0(다른 방향)이다 — 학습 데이터에 없던 종류의 회전을 요구하는 만큼 특히 어려운 일반화 테스트다. 실제 웹 서비스가 노출하는 템플릿(open/neighbors/pillar)은 전부 학습·검증에 포함됐다.",
+    "이 evaluate.ts는 학습에 쓰지 않은 scenario에서만 돌렸다(train/validation과 분리 확인됨 — generate-dataset.ts의 layoutGroup 분리 로직).",
+    "실패(충돌) 시 즉시 종료되므로 실패 사례가 1개뿐이라 실패 유형 분포를 논하기엔 표본이 너무 작다."
+  ]
+}

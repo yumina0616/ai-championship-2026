@@ -105,7 +105,7 @@ describe("planHybridAStar", () => {
     });
     const result = planHybridAStar(s, { maxExpansions: 5000 });
     expect(result.found).toBe(false);
-  }, 20000);
+  }, 40000); // 정지 시뮬레이션(관성 오버슈트 검사) 때문에 노드당 비용이 늘어 시간 여유를 더 둔다.
 
   it("실제 examples/scenarios/reverse-bay.v1.json(주차된 옆 차량 2대+기둥)에서 충돌 없이 목표에 도착한다", () => {
     const text = readFileSync(new URL("../../examples/scenarios/reverse-bay.v1.json", import.meta.url));

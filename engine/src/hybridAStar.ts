@@ -76,19 +76,76 @@ function heuristic(pose: Pose, goal: Pose): number {
 /**
  * engine.ts의 isSuccessConditionMetNow()와 같은 기준(속도 조건 제외 — 계획 시점엔 아직 정지
  * 전이라 당연히 못 맞춘다. 정지+유지 시간은 flatten 이후 붙이는 hold 구간이 책임진다).
+ *
+ * 여기서 좁은 레이아웃(주차차량 사이 간격이 좁은 경우)에서 실제로 겪은 버그: 목표 tolerance를
+ * "이동 중"에 만족한 순간을 goal로 인정하면, 이후 정지하려고 감속하는 동안(hold 구간, target=0
+ * 이라도 clampCommand 때문에 즉시 멈추지 않는다) 관성으로 조금 더 나아가 바로 옆 장애물과
+ * 충돌할 수 있다. 그래서 goal 후보를 찾으면 "여기서 실제로 안전하게 멈출 수 있는가"까지
+ * simulateStopFromNode()로 미리 확인한다.
  */
-function isGoal(pose: Pose, scenario: Scenario): boolean {
+function isGoal(
+  node: { pose: Pose; lastAppliedCommand: Command },
+  scenario: Scenario,
+  opts: HybridAStarOptions
+): boolean {
   const criteria = scenario.successCriteria;
+
+  // 정지 시뮬레이션(느림)을 돌리기 전에 애초에 근처도 아닌 노드는 값싸게 걸러낸다.
+  // 여유값은 "최대 관성 이동거리(v^2/2a)"를 대략 반영한 버퍼다.
+  const coastBufferM = scenario.vehicle.maxForwardSpeedMps ** 2 / (2 * (scenario.vehicle.maxAccelerationMps2 ?? 2.0));
+  const roughPositionErrorM = Math.hypot(node.pose.xM - scenario.goalPose.xM, node.pose.yM - scenario.goalPose.yM);
+  if (roughPositionErrorM > criteria.positionToleranceM + coastBufferM + 0.5) return false;
+  const roughYawErrorRad = Math.abs(normalizeAngle(node.pose.yawRad - scenario.goalPose.yawRad));
+  if (roughYawErrorRad > criteria.yawToleranceRad + 0.3) return false;
+
+  // 실제로 멈춘 뒤의 pose로 다시 검사한다 — 감속 중 관성으로 tolerance/장애물을 벗어날 수 있다.
+  const stop = simulateStopFromNode(node, scenario, opts);
+  if (!stop.safe) return false;
+
   if (
     criteria.requireFootprintInsideGoal &&
-    !footprintFullyInsideGoal(pose, scenario.vehicle, scenario.goalSpace)
+    !footprintFullyInsideGoal(stop.stoppedPose, scenario.vehicle, scenario.goalSpace)
   ) {
     return false;
   }
-  const positionErrorM = Math.hypot(pose.xM - scenario.goalPose.xM, pose.yM - scenario.goalPose.yM);
+  const positionErrorM = Math.hypot(
+    stop.stoppedPose.xM - scenario.goalPose.xM,
+    stop.stoppedPose.yM - scenario.goalPose.yM
+  );
   if (positionErrorM > criteria.positionToleranceM) return false;
-  const yawErrorRad = Math.abs(normalizeAngle(pose.yawRad - scenario.goalPose.yawRad));
+  const yawErrorRad = Math.abs(normalizeAngle(stop.stoppedPose.yawRad - scenario.goalPose.yawRad));
   return yawErrorRad <= criteria.yawToleranceRad;
+}
+
+interface StopSimulation {
+  safe: boolean;
+  stoppedPose: Pose;
+}
+
+/** target={0,0}으로 계속 적분해 완전히 멈출 때까지 충돌 여부와 최종 정지 pose를 함께 낸다. */
+function simulateStopFromNode(
+  node: { pose: Pose; lastAppliedCommand: Command },
+  scenario: Scenario,
+  opts: HybridAStarOptions
+): StopSimulation {
+  const zero: Command = { targetSpeedMps: 0, targetSteeringRad: 0 };
+  let pose = node.pose;
+  let applied = node.lastAppliedCommand;
+  const maxAccel = scenario.vehicle.maxAccelerationMps2 ?? 2.0;
+  const maxSteps = Math.ceil(scenario.vehicle.maxForwardSpeedMps / maxAccel / opts.integrationDtS) + 5;
+
+  for (let i = 0; i < maxSteps; i++) {
+    if (Math.abs(applied.targetSpeedMps) < 1e-6) return { safe: true, stoppedPose: pose };
+    applied = clampCommand(zero, applied, scenario.vehicle, opts.integrationDtS);
+    pose = integrateBicycleModel(pose, applied, scenario.vehicle.wheelbaseM, opts.integrationDtS);
+    if (
+      footprintCollides(pose, scenario.vehicle, scenario.obstacles) ||
+      footprintOutOfBounds(pose, scenario.vehicle, scenario.bounds)
+    ) {
+      return { safe: false, stoppedPose: pose };
+    }
+  }
+  return { safe: true, stoppedPose: pose };
 }
 
 function buildPrimitiveTargets(scenario: Scenario, opts: HybridAStarOptions): Command[] {
@@ -184,7 +241,7 @@ export function planHybridAStar(
     const node = open.pop()!;
     expanded++;
 
-    if (isGoal(node.pose, scenario)) {
+    if (isGoal(node, scenario, opts)) {
       return { found: true, primitiveTargets: reconstructPrimitiveTargets(node), expandedNodes: expanded };
     }
 

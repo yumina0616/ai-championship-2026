@@ -57,3 +57,21 @@ jobs:
         with:
           name: parking-web-preview
           path: web/dist/
+  training:
+    # #11 리뷰 지적사항: training/(학습 파이프라인)이 지금까지 CI에서 전혀 검사되지 않았다.
+    # 타입·shape/finite·메모리 누수·seed 재현성 회귀 테스트를 최소한으로 연결한다.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: training/package-lock.json
+      - run: npm ci
+        working-directory: training
+      - run: npm run typecheck
+        working-directory: training
+      - run: npm test
+        working-directory: training
