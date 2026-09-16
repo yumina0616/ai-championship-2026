@@ -921,6 +921,7 @@ export default function ParkingScene({
   reverse = false,
   opening = false,
   onOpeningDone,
+  quality = "high",
 }: {
   template: TemplateId;
   customScenario?: Scenario;
@@ -937,6 +938,7 @@ export default function ParkingScene({
   onUnavailable?: () => void;
   opening?: boolean;
   onOpeningDone: () => void;
+  quality?: "high" | "low";
 }) {
   const openingFrames = useMemo(() => buildOpening(), []);
   const openingMotion = useRef<MotionFrame>({
@@ -949,6 +951,7 @@ export default function ParkingScene({
   const sceneMotion = opening ? openingMotion : motion;
   const host = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
+  const [lost, setLost] = useState(false);
   useEffect(() => {
     let intersecting = true;
     const update = () => setVisible(intersecting && !document.hidden);
@@ -957,10 +960,18 @@ export default function ParkingScene({
       update();
     });
     if (host.current) observer.observe(host.current);
+    // R3F 자식의 비동기 초기화 전에도 non-bubbling context loss를 감지한다.
+    const node = host.current;
+    const contextLost = (event: Event) => {
+      event.preventDefault();
+      setLost(true);
+    };
+    node?.addEventListener("webglcontextlost", contextLost, true);
     document.addEventListener("visibilitychange", update);
     update();
     return () => {
       observer.disconnect();
+      node?.removeEventListener("webglcontextlost", contextLost, true);
       document.removeEventListener("visibilitychange", update);
     };
   }, []);
@@ -975,9 +986,10 @@ export default function ParkingScene({
       return false;
     }
   });
-  if (!supported) return <SceneUnavailable onUnavailable={onUnavailable} />;
+  if (!supported || lost)
+    return <SceneUnavailable onUnavailable={onUnavailable} />;
   return (
-    <div ref={host} className="scene-canvas">
+    <div ref={host} className="scene-canvas" data-quality={quality}>
       <SceneBoundary onUnavailable={onUnavailable}>
         <Suspense
           fallback={
@@ -985,8 +997,8 @@ export default function ParkingScene({
           }
         >
           <Canvas
-            shadows
-            dpr={[1, 1.25]}
+            shadows={quality === "high"}
+            dpr={quality === "low" ? 0.75 : [1, 1.25]}
             frameloop="demand"
             camera={{ position: [18, 3.4, 20], fov: 40 }}
             fallback={<span>3D를 지원하는 브라우저에서 다시 열어주세요.</span>}

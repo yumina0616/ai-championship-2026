@@ -76,7 +76,13 @@ export default function EpisodeLibrary({
         )
       : null;
   return (
-    <details className="workbench" id="records">
+    <details
+      className="workbench"
+      id="records"
+      onToggle={(e) => {
+        if (!e.currentTarget.open) setPlaying(false);
+      }}
+    >
       <summary>
         내 주행 기록 <span>LOCAL / STATE PLAYBACK</span>
       </summary>

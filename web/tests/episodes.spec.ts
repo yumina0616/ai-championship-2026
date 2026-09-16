@@ -148,6 +148,50 @@ test("실제 주행을 중단하면 IndexedDB에 남고 새로고침 후 복원"
   await page.screenshot({ path: test.info().outputPath("record-player.png") });
 });
 
+test("체크포인트는 기존 본문을 재조회하지 않고 최근 5개를 유지", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/#garage");
+  const e = sample();
+  const result = await page.evaluate(async (record) => {
+    const path = "/src/episodes.ts";
+    const api = await import(/* @vite-ignore */ path);
+    await api.deleteEpisode();
+    await api.saveEpisode(record);
+    let reads = 0;
+    const original = IDBObjectStore.prototype.getAll;
+    IDBObjectStore.prototype.getAll = function (...args) {
+      reads++;
+      return original.apply(this, args);
+    };
+    try {
+      await api.saveEpisode(record);
+      await api.saveEpisode(record);
+      const checkpointReads = reads;
+      for (let i = 1; i <= 6; i++) {
+        const next = structuredClone(record);
+        next.header.episodeId = crypto.randomUUID();
+        next.header.startedAt = new Date(
+          Date.parse(record.header.startedAt) + i * 1000,
+        ).toISOString();
+        await api.saveEpisode(next);
+      }
+      const rows = await api.listEpisodes();
+      return {
+        checkpointReads,
+        count: rows.length,
+        old: rows.some(
+          (r: typeof record) => r.header.episodeId === record.header.episodeId,
+        ),
+      };
+    } finally {
+      IDBObjectStore.prototype.getAll = original;
+    }
+  }, e);
+  expect(result).toEqual({ checkpointReads: 0, count: 5, old: false });
+});
+
 test("저장소 거부 시에도 메모리 기록 내보내기가 가능", async ({ page }) => {
   test.setTimeout(60000);
   await page.addInitScript(() =>
