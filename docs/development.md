@@ -27,6 +27,8 @@ git switch -c feature/4-web-foundation
 
 짧은 수명의 Issue 브랜치를 사용합니다. 선행 PR이 필요한 코드는 main 병합 후 이어가며, 급히 branch-on-branch가 필요하면 base와 병합 순서를 PR에 명시합니다. 타인의 브랜치를 force push하지 않습니다.
 
+연쇄 PR은 선행 PR 병합 후 다음 PR의 **base를 main으로 변경**하고 main 기준 diff와 최신 CI를 다시 확인합니다. feature 브랜치에 병합된 PR의 `Merged` 표시만으로 main 반영 완료라고 판단하지 않습니다. squash로 이력이 달라 충돌하면 변경을 확인해 통합하며, 병합 후 main에 실제 파일이 있는지 확인합니다.
+
 main 직접 개발/커밋/푸시는 원칙적으로 금지합니다. 예외는 빈 저장소의 최초 문서 bootstrap뿐입니다. 제출 후 수정도 Issue→branch→PR을 따릅니다.
 
 ## 커밋 언어

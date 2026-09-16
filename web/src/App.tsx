@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -41,7 +42,8 @@ import SensorAssist, { sensorFeedback } from "./SensorAssist";
 import ParkingFeedback, { parkingMessage } from "./ParkingFeedback";
 import { chapterAt, storyChapters } from "./story";
 import MapEditor from "./MapEditor";
-import type { ParkingMap } from "./maps";
+import EpisodeLibrary from "./EpisodeLibrary";
+import { mapScenario, type ParkingMap } from "./maps";
 const ParkingScene = lazy(() => import("./ParkingScene"));
 
 function Logo() {
@@ -107,9 +109,27 @@ export default function App() {
   const [view, setView] = useState<"landing" | "drive">("landing");
   const [template, setTemplate] = useState<TemplateId>("open");
   const [customMap, setCustomMap] = useState<ParkingMap | null>(null);
+  const [recordLocally, setRecordLocally] = useState(() => {
+    try {
+      return localStorage.getItem("parkside-record-locally") !== "off";
+    } catch {
+      return true;
+    }
+  });
+  const [preferenceError, setPreferenceError] = useState("");
+  const [quality, setQuality] = useState<"high" | "low">(() => {
+    try {
+      return localStorage.getItem("parkside-quality") === "low"
+        ? "low"
+        : "high";
+    } catch {
+      return "high";
+    }
+  });
   const [mode, setMode] = useState<Mode>("human");
   const [camera, setCamera] = useState<CameraMode>("orbit");
   const [sensors, setSensors] = useState(false);
+  const [sensorSound, setSensorSound] = useState(false);
   const [grid, setGrid] = useState(false);
   const [state, setState] = useState<PreviewState>("idle");
   const [error, setError] = useState("");
@@ -144,7 +164,23 @@ export default function App() {
     top: 0,
     height: window.innerHeight,
   });
-  const driving = useDriving(template);
+  const customScenario = useMemo(
+    () => (customMap ? mapScenario(customMap) : undefined),
+    [customMap],
+  );
+  const driving = useDriving(template, customScenario, recordLocally);
+  driving.context.current = {
+    viewMode: camera,
+    assistanceFlags: [
+      "parking-status",
+      "sensor-clearance",
+      "steering-return",
+      ...(sensors ? ["sensor-rays"] : []),
+      ...(grid ? ["grid"] : []),
+      ...(camera === "rear" ? ["reverse-guide"] : []),
+      ...(sensorSound ? ["sensor-sound"] : []),
+    ],
+  };
   const wheelDrag = useRef<{ id: number; x: number; value: number } | null>(
     null,
   );
@@ -315,7 +351,8 @@ export default function App() {
     try {
       if (cinematicEntry) {
         await new Promise<void>((resolve) => window.setTimeout(resolve, 320));
-        if (id !== requestId.current || controller.signal.aborted) return;
+        if (id !== requestId.current) return;
+        if (controller.signal.aborted) throw Error("진입이 취소됐어요.");
         setView("drive");
         setDeparting(false);
       }
@@ -335,6 +372,7 @@ export default function App() {
         });
       }
       if (id === requestId.current) {
+        if (controller.signal.aborted) throw Error("진입이 취소됐어요.");
         driving.start();
         setState("ready");
       }
@@ -445,6 +483,8 @@ export default function App() {
           <ParkingScene
             key={sceneRevision}
             template={template}
+            customScenario={customScenario}
+            quality={quality}
             result={driving.result}
             motion={driving.motion}
             opening={opening}
@@ -761,21 +801,25 @@ export default function App() {
                 {templates.map((t, i) => (
                   <label
                     className={
-                      "mission " + (template === t.id ? "selected" : "")
+                      "mission " +
+                      (!customMap && template === t.id ? "selected" : "")
                     }
                     key={t.id}
                   >
                     <input
                       type="radio"
                       name="template"
-                      checked={template === t.id}
-                      onChange={() => setTemplate(t.id)}
+                      checked={!customMap && template === t.id}
+                      onChange={() => {
+                        setCustomMap(null);
+                        setTemplate(t.id);
+                      }}
                       aria-label={t.title}
                     />
                     <div className="mission-header">
                       <span>EXPERIMENT / 0{i + 1}</span>
                       <span className="mission-check">
-                        {template === t.id ? (
+                        {!customMap && template === t.id ? (
                           <Check size={15} />
                         ) : (
                           <ArrowUpRight size={16} />
@@ -795,11 +839,17 @@ export default function App() {
                   </label>
                 ))}
               </fieldset>
-              <MapEditor template={template} onApply={setCustomMap} />
+              <MapEditor
+                template={template}
+                initialMap={customMap}
+                onApply={(map) => {
+                  setOpening(false);
+                  setCustomMap(map);
+                }}
+              />
               {customMap && (
                 <p className="availability">
-                  편집한 맵: {customMap.name} · 운전 연결은 다음 PR에서
-                  제공해요.
+                  적용한 맵: {customMap.name} · 아래 시작 버튼으로 운전해보세요.
                 </p>
               )}
               <div className="garage-console">
@@ -843,6 +893,67 @@ export default function App() {
                   <ArrowRight size={19} />
                 </button>
               </div>
+              <p className="availability">
+                {recordLocally
+                  ? "주행은 이 브라우저에 최근 5회만 보관해요."
+                  : "다음 주행은 기록하지 않아요. 기존 기록은 유지돼요."}{" "}
+                서버 전송·학습 기여는 하지 않아요.
+              </p>
+              <label className="local-record-choice">
+                그래픽 품질
+                <select
+                  aria-label="그래픽 품질"
+                  value={quality}
+                  onChange={(e) => {
+                    const next = e.target.value as "high" | "low";
+                    setQuality(next);
+                    try {
+                      localStorage.setItem("parkside-quality", next);
+                    } catch {
+                      setPreferenceError("그래픽 설정은 이번 탭에만 적용돼요.");
+                    }
+                  }}
+                >
+                  <option value="high">고화질</option>
+                  <option value="low">성능 우선</option>
+                </select>
+              </label>
+              <p className="availability">
+                성능 우선은 그림자와 렌더 해상도만 낮춰요. 차량 물리·충돌·센서
+                계산은 동일해요.
+              </p>
+              <label className="local-record-choice">
+                <input
+                  type="checkbox"
+                  checked={recordLocally}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setRecordLocally(enabled);
+                    try {
+                      localStorage.setItem(
+                        "parkside-record-locally",
+                        enabled ? "on" : "off",
+                      );
+                      setPreferenceError("");
+                    } catch {
+                      setPreferenceError(
+                        "설정은 이번 탭에만 적용돼요. 새로고침하면 다시 확인해주세요.",
+                      );
+                    }
+                  }}
+                />{" "}
+                이 브라우저에 주행 기록 보관
+              </label>
+              {preferenceError && <p role="status">{preferenceError}</p>}
+              <p className="availability">
+                학습 기여: 제공하지 않음 · 켜거나 동의하지 않아도 모든 개인
+                연습을 사용할 수 있어요.
+              </p>
+              <EpisodeLibrary
+                onForget={driving.forgetEpisode}
+                latest={driving.lastEpisode}
+                error={driving.storageError}
+              />
               {mode === "mascot" && (
                 <p className="availability" role="status">
                   마스코트는 아직 운전하지 않아요. 학습한 정책을 연결한 뒤 같은
@@ -950,7 +1061,7 @@ export default function App() {
                 {templates.findIndex((t) => t.id === template) + 1}
               </span>
               <h1 ref={driveTitle} tabIndex={-1}>
-                {selected.title}
+                {customMap?.name ?? selected.title}
               </h1>
               <p>
                 <Flag size={13} /> 표시된 칸에 정차한 뒤 P로 마무리
@@ -993,6 +1104,7 @@ export default function App() {
               </button>
             </div>
             <SensorAssist
+              onSoundChange={setSensorSound}
               result={driving.result}
               scenario={driving.scenario}
               running={
@@ -1168,9 +1280,15 @@ export default function App() {
                     </button>
                   </div>
                   <small className="result-note">
-                    이번 실행의 실제 측정값 · 기록 저장/AI 비교는 아직 제공하지
-                    않아요.
+                    이번 실행의 실제 측정값 ·{" "}
+                    {recordLocally
+                      ? "차고의 내 주행 기록에서 저장 상태를 재생할 수 있어요."
+                      : "로컬 기록을 꺼서 이번 주행은 보관하지 않았어요."}{" "}
+                    AI 비교는 아직 제공하지 않아요.
                   </small>
+                  {driving.storageError && (
+                    <p role="alert">{driving.storageError}</p>
+                  )}
                 </section>
               </div>
             )}
@@ -1450,9 +1568,10 @@ export default function App() {
                 시도와 실패를 관찰할 수 있는 참여형 주차 실험실을 만들고 있어요.
               </p>
               <p>
-                지금은 직접 운전·거리 센서·결과 확인이 동작합니다. 학습된
-                마스코트, 자유 편집, 기록 기여와 비교는 개발 예정이에요. 참여
-                수가 늘었다고 모델 성능이 자동으로 좋아졌다고 표현하지 않습니다.
+                지금은 직접 운전·거리 센서·결과 확인이 동작합니다. 학습된 맵
+                편집과 로컬 기록 재생을 제공해요. 마스코트, 기록 기여와 비교는
+                개발 예정이에요. 참여 수가 늘었다고 모델 성능이 자동으로
+                좋아졌다고 표현하지 않습니다.
               </p>
               <p className="dialog-note">
                 PARKSIDE는 임시 이름입니다. 주행 데이터는 서버에 전송하지
