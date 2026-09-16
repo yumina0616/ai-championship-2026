@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/wrangler@4.132.0/config-schema.json",
+  "name": "parkside-parking",
+  "account_id": "663aba20dd087e7242771263ce8b2105",
+  "main": "cloudflare/worker.ts",
+  "compatibility_date": "2026-09-16",
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./web/dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "r2_buckets": [
+    { "binding": "RECORDS", "bucket_name": "parkside-driving-records" }
+  ],
+  "observability": { "enabled": false },
+  "send_metrics": false
+}

@@ -3,6 +3,23 @@ import { makeScenario } from "../src/driving";
 import { policySupportError, POLICY_VERSION } from "../src/policy-info";
 import { parseEpisode } from "../src/episodes";
 
+test("AI 첫 다운로드가 8초를 넘어도 로딩을 유지하고 실제 추론 시작", async ({ page }) => {
+  test.setTimeout(45000);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("**/src/policy.ts", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 9000));
+    await route.continue();
+  });
+  await page.goto("/#garage");
+  await page.getByRole("radio", { name: /마스코트/ }).check();
+  await page.getByRole("button", { name: "마스코트 운전 보기" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "최대 30초" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "연습 마치기", exact: true })).toBeEnabled({ timeout: 30000 });
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect.poll(async () => Number(await page.getByTestId("speed").innerText())).toBeGreaterThan(0.1);
+  await page.getByRole("button", { name: "연습 마치기", exact: true }).click();
+});
+
 test("지원 차량·센서 규격을 확인하고 다른 입력을 거부", () => {
   const s = makeScenario("open");
   expect(policySupportError(s)).toBeNull();
