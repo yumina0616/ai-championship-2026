@@ -18,6 +18,7 @@ install/
 data/raw/
 artifacts/
 checkpoints/
+training/data/
 *.pt
 *.pth
 *.onnx

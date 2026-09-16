@@ -1,0 +1,21 @@
+{
+  "name": "@parking-spike/training",
+  "version": "0.1.0",
+  "private": true,
+  "description": "#11 초기 정책 학습 파이프라인. engine/ 소스를 직접 import한다(런타임 의존 아님). @tensorflow/tfjs(순수 JS, CPU 백엔드)를 쓴다 — tfjs-node의 네이티브 바인딩이 이 Windows 환경에서 로드 실패해서 교체했다. 브라우저와 완전히 같은 패키지라 학습·추론 런타임이 일치한다.",
+  "type": "module",
+  "scripts": {
+    "generate-dataset": "tsx src/generateDataset.ts",
+    "train": "tsx src/train.ts",
+    "evaluate": "tsx src/evaluate.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0"
+  }
+}

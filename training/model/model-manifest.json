@@ -1,0 +1,38 @@
+{
+  "policyVersion": "parking-mlp-v1",
+  "artifactChecksumSha256": "08854ea4df063e26d07bd633e22905531c8ae39fb471bb142bf5b7000c8fdabc",
+  "framework": "@tensorflow/tfjs",
+  "frameworkVersion": "4.x",
+  "runtime": "pure-js (cpu backend) — 브라우저와 동일 패키지, tfjs-node 미사용(Windows 네이티브 바인딩 로드 실패로 회피)",
+  "observationSchema": {
+    "featureOrder": "sensors[36] (range_m/10, valid 아니면 1) + speed/maxForward + steer/maxSteering + goalRelative.x/10 + goalRelative.y/10 + goalRelative.yaw/pi",
+    "expectedRayCount": 36
+  },
+  "actionSchema": {
+    "labelOrder": "[targetSpeedMps/speedLimit, targetSteeringRad/maxSteeringRad]",
+    "note": "speedLimit은 부호에 따라 maxForwardSpeedMps 또는 maxReverseSpeedMps"
+  },
+  "supportedVehicle": "synthetic-compact-v1 (examples/scenarios 참고) — 다른 차종/센서 배치는 미지원",
+  "trainDataSnapshot": {
+    "trainScenarioIds": [
+      "parkside-open-v1",
+      "parkside-neighbors-v1",
+      "parkside-pillar-v1"
+    ],
+    "excludedScenarioIds": [],
+    "note": "이번 실행에서는 후보 scenario 전부 성공적으로 rollout을 만들어 학습에 사용함"
+  },
+  "trainConfig": {
+    "seed": 42,
+    "epochs": 200,
+    "batchSize": 32,
+    "trainSamples": 1092,
+    "validationSamples": 594,
+    "finalTrainLoss": 0.0010547902202233672,
+    "finalValidationLoss": 0.00908196996897459,
+    "trainedAt": "2026-09-16T02:26:31.207Z"
+  },
+  "codeCommit": "c58b7a968f64d413a21deabda59547c00075ff4e",
+  "license": "저장소 프로젝트 라이선스 미확정 — README.md '라이선스·권리' 참고",
+  "evaluationConfigAndResults": "training/model/eval-report.json (이 파일과 같은 커밋에서 생성)"
+}
