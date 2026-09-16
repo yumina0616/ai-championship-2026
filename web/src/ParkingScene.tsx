@@ -20,6 +20,7 @@ import {
 import { Vector3, Shape, DataTexture, RGBAFormat, RepeatWrapping } from "three";
 import type { OrbitControls as OrbitControlsType } from "three-stdlib";
 import type { TemplateId } from "./preview";
+import type { Scenario } from "../../engine/src/index";
 import {
   carTransform,
   makeScenario,
@@ -536,6 +537,7 @@ function CameraRig({
 }
 function World({
   template,
+  customScenario,
   grid,
   result,
   sensors,
@@ -545,6 +547,7 @@ function World({
   motion,
 }: {
   template: TemplateId;
+  customScenario?: Scenario;
   grid: boolean;
   result: StepResult | null;
   sensors: boolean;
@@ -553,7 +556,10 @@ function World({
   reverse: boolean;
   motion: RefObject<MotionFrame>;
 }) {
-  const scenario = useMemo(() => makeScenario(template), [template]);
+  const scenario = useMemo(
+    () => customScenario ?? makeScenario(template),
+    [template, customScenario],
+  );
   const carOrigin = useMemo(() => carTransform(scenario.start), [scenario]);
   const asphalt = useMemo(() => {
     const data = new Uint8Array(128 * 128 * 4);
@@ -623,7 +629,7 @@ function World({
           size={[17.4, 0.4, 0.35]}
           color="#687076"
         />
-        {[-6, -3, 0, 3, 6].map((x, i) =>
+        {(customScenario ? [0] : [-6, -3, 0, 3, 6]).map((x, i) =>
           x === 0 ? (
             <group key={x} name="parking-goal">
               <mesh
@@ -709,8 +715,12 @@ function World({
           ),
         )}
         {scenario.obstacles.map((o, i) =>
-          o.id === "pillar" ? (
-            <group key={o.id} position={[o.centerXM, 0, -o.centerYM]}>
+          !o.id.startsWith("parked") ? (
+            <group
+              key={o.id}
+              position={[o.centerXM, 0, -o.centerYM]}
+              rotation={[0, o.yawRad, 0]}
+            >
               <Box
                 position={[0, 1.2, 0]}
                 size={[o.lengthM, 2.4, o.widthM]}
@@ -897,6 +907,7 @@ export class SceneBoundary extends Component<
 }
 export default function ParkingScene({
   template,
+  customScenario,
   result,
   motion,
   cameraMode,
@@ -910,8 +921,10 @@ export default function ParkingScene({
   reverse = false,
   opening = false,
   onOpeningDone,
+  quality = "high",
 }: {
   template: TemplateId;
+  customScenario?: Scenario;
   result: StepResult | null;
   motion: RefObject<MotionFrame>;
   cameraMode: CameraMode;
@@ -925,6 +938,7 @@ export default function ParkingScene({
   onUnavailable?: () => void;
   opening?: boolean;
   onOpeningDone: () => void;
+  quality?: "high" | "low";
 }) {
   const openingFrames = useMemo(() => buildOpening(), []);
   const openingMotion = useRef<MotionFrame>({
@@ -937,6 +951,7 @@ export default function ParkingScene({
   const sceneMotion = opening ? openingMotion : motion;
   const host = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
+  const [lost, setLost] = useState(false);
   useEffect(() => {
     let intersecting = true;
     const update = () => setVisible(intersecting && !document.hidden);
@@ -945,10 +960,18 @@ export default function ParkingScene({
       update();
     });
     if (host.current) observer.observe(host.current);
+    // R3F 자식의 비동기 초기화 전에도 non-bubbling context loss를 감지한다.
+    const node = host.current;
+    const contextLost = (event: Event) => {
+      event.preventDefault();
+      setLost(true);
+    };
+    node?.addEventListener("webglcontextlost", contextLost, true);
     document.addEventListener("visibilitychange", update);
     update();
     return () => {
       observer.disconnect();
+      node?.removeEventListener("webglcontextlost", contextLost, true);
       document.removeEventListener("visibilitychange", update);
     };
   }, []);
@@ -963,9 +986,10 @@ export default function ParkingScene({
       return false;
     }
   });
-  if (!supported) return <SceneUnavailable onUnavailable={onUnavailable} />;
+  if (!supported || lost)
+    return <SceneUnavailable onUnavailable={onUnavailable} />;
   return (
-    <div ref={host} className="scene-canvas">
+    <div ref={host} className="scene-canvas" data-quality={quality}>
       <SceneBoundary onUnavailable={onUnavailable}>
         <Suspense
           fallback={
@@ -973,8 +997,8 @@ export default function ParkingScene({
           }
         >
           <Canvas
-            shadows
-            dpr={[1, 1.25]}
+            shadows={quality === "high"}
+            dpr={quality === "low" ? 0.75 : [1, 1.25]}
             frameloop="demand"
             camera={{ position: [18, 3.4, 20], fov: 40 }}
             fallback={<span>3D를 지원하는 브라우저에서 다시 열어주세요.</span>}
@@ -1028,6 +1052,7 @@ export default function ParkingScene({
             />
             <World
               template={template}
+              customScenario={customScenario}
               grid={grid}
               result={result}
               sensors={sensors && !opening}

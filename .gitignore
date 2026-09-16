@@ -25,3 +25,4 @@ checkpoints/
 *.mcap
 test-results/
 playwright-report/
+.vite/
