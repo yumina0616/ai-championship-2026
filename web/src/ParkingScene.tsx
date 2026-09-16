@@ -20,6 +20,7 @@ import {
 import { Vector3, Shape, DataTexture, RGBAFormat, RepeatWrapping } from "three";
 import type { OrbitControls as OrbitControlsType } from "three-stdlib";
 import type { TemplateId } from "./preview";
+import type { Scenario } from "../../engine/src/index";
 import {
   carTransform,
   makeScenario,
@@ -536,6 +537,7 @@ function CameraRig({
 }
 function World({
   template,
+  customScenario,
   grid,
   result,
   sensors,
@@ -545,6 +547,7 @@ function World({
   motion,
 }: {
   template: TemplateId;
+  customScenario?: Scenario;
   grid: boolean;
   result: StepResult | null;
   sensors: boolean;
@@ -553,7 +556,10 @@ function World({
   reverse: boolean;
   motion: RefObject<MotionFrame>;
 }) {
-  const scenario = useMemo(() => makeScenario(template), [template]);
+  const scenario = useMemo(
+    () => customScenario ?? makeScenario(template),
+    [template, customScenario],
+  );
   const carOrigin = useMemo(() => carTransform(scenario.start), [scenario]);
   const asphalt = useMemo(() => {
     const data = new Uint8Array(128 * 128 * 4);
@@ -623,7 +629,7 @@ function World({
           size={[17.4, 0.4, 0.35]}
           color="#687076"
         />
-        {[-6, -3, 0, 3, 6].map((x, i) =>
+        {(customScenario ? [0] : [-6, -3, 0, 3, 6]).map((x, i) =>
           x === 0 ? (
             <group key={x} name="parking-goal">
               <mesh
@@ -709,8 +715,12 @@ function World({
           ),
         )}
         {scenario.obstacles.map((o, i) =>
-          o.id === "pillar" ? (
-            <group key={o.id} position={[o.centerXM, 0, -o.centerYM]}>
+          !o.id.startsWith("parked") ? (
+            <group
+              key={o.id}
+              position={[o.centerXM, 0, -o.centerYM]}
+              rotation={[0, o.yawRad, 0]}
+            >
               <Box
                 position={[0, 1.2, 0]}
                 size={[o.lengthM, 2.4, o.widthM]}
@@ -897,6 +907,7 @@ export class SceneBoundary extends Component<
 }
 export default function ParkingScene({
   template,
+  customScenario,
   result,
   motion,
   cameraMode,
@@ -912,6 +923,7 @@ export default function ParkingScene({
   onOpeningDone,
 }: {
   template: TemplateId;
+  customScenario?: Scenario;
   result: StepResult | null;
   motion: RefObject<MotionFrame>;
   cameraMode: CameraMode;
@@ -1028,6 +1040,7 @@ export default function ParkingScene({
             />
             <World
               template={template}
+              customScenario={customScenario}
               grid={grid}
               result={result}
               sensors={sensors && !opening}

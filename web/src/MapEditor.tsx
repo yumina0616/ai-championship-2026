@@ -15,12 +15,16 @@ import "./workbench.css";
 
 export default function MapEditor({
   template,
+  initialMap,
   onApply,
 }: {
   template: TemplateId;
+  initialMap?: ParkingMap | null;
   onApply: (map: ParkingMap) => void;
 }) {
-  const [map, setMap] = useState(() => newMap(template));
+  const [map, setMap] = useState(() =>
+    structuredClone(initialMap ?? newMap(template)),
+  );
   const [selected, select] = useState("start");
   const [notice, setNotice] = useState("");
   const drag = useRef<{
