@@ -1,10 +1,15 @@
 {
   "seed": 42,
+  "seedAppliedTo": [
+    "buildModel() kernelInitializer(glorotUniform)",
+    "train.json 사전 셔플"
+  ],
   "epochs": 200,
   "batchSize": 32,
+  "shuffle": "사전 셔플 1회(seed 기반), epoch별 재셔플 없음",
   "trainSamples": 1092,
   "validationSamples": 594,
-  "finalTrainLoss": 0.0010547902202233672,
-  "finalValidationLoss": 0.00908196996897459,
-  "trainedAt": "2026-09-16T02:26:31.207Z"
+  "finalTrainLoss": 0.0008155490504577756,
+  "finalValidationLoss": 0.0070734331384301186,
+  "trainedAt": "2026-09-16T06:56:22.769Z"
 }

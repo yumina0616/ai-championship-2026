@@ -8,12 +8,14 @@
     "generate-dataset": "tsx src/generateDataset.ts",
     "train": "tsx src/train.ts",
     "evaluate": "tsx src/evaluate.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.1"
   },
   "dependencies": {
     "@tensorflow/tfjs": "^4.22.0"

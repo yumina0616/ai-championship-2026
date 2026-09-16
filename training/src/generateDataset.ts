@@ -2,7 +2,7 @@
 // docs/data-learning.md: "잘못된 조작을 무조건 정답 행동으로 학습시키지 않는다" — 실패
 // (충돌/timeout/계획 실패)한 시나리오는 로그만 남기고 학습 데이터에서 제외한다.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   loadScenarioFromJson,
   runHybridAStarRollout,
@@ -112,4 +112,5 @@ function main() {
   console.log(`heldout scenarios: ${split.heldout.map((s) => s.scenarioId).join(", ")}`);
 }
 
-main();
+const isMainModule = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMainModule) main();

@@ -1,6 +1,6 @@
 {
   "policyVersion": "parking-mlp-v1",
-  "artifactChecksumSha256": "08854ea4df063e26d07bd633e22905531c8ae39fb471bb142bf5b7000c8fdabc",
+  "artifactChecksumSha256": "1f5b7772bc4322d3e0a418cd99e5b41983068c16fab027fba87ad56dc7487681",
   "framework": "@tensorflow/tfjs",
   "frameworkVersion": "4.x",
   "runtime": "pure-js (cpu backend) — 브라우저와 동일 패키지, tfjs-node 미사용(Windows 네이티브 바인딩 로드 실패로 회피)",
@@ -16,23 +16,35 @@
   "trainDataSnapshot": {
     "trainScenarioIds": [
       "parkside-open-v1",
-      "parkside-neighbors-v1",
+      "parkside-neighbors-v1"
+    ],
+    "validationScenarioIds": [
       "parkside-pillar-v1"
     ],
     "excludedScenarioIds": [],
-    "note": "이번 실행에서는 후보 scenario 전부 성공적으로 rollout을 만들어 학습에 사용함"
+    "note": "이번 실행에서는 후보 scenario 전부 성공적으로 rollout을 만들어 학습·검증에 사용함"
   },
   "trainConfig": {
     "seed": 42,
+    "seedAppliedTo": [
+      "buildModel() kernelInitializer(glorotUniform)",
+      "train.json 사전 셔플"
+    ],
     "epochs": 200,
     "batchSize": 32,
+    "shuffle": "사전 셔플 1회(seed 기반), epoch별 재셔플 없음",
     "trainSamples": 1092,
     "validationSamples": 594,
-    "finalTrainLoss": 0.0010547902202233672,
-    "finalValidationLoss": 0.00908196996897459,
-    "trainedAt": "2026-09-16T02:26:31.207Z"
+    "finalTrainLoss": 0.0008155490504577756,
+    "finalValidationLoss": 0.0070734331384301186,
+    "trainedAt": "2026-09-16T06:56:22.769Z"
   },
-  "codeCommit": "c58b7a968f64d413a21deabda59547c00075ff4e",
+  "sourceProvenance": {
+    "trainingSourceDigestSha256": "04a8c1f9a693670d7e72f6a3737bdbed2c8f9696eb9361c65323a48cfe93bc9c",
+    "digestNote": "training/src/*.ts 전체(파일명순 정렬) 내용의 SHA-256 — 이 값이 나오는 소스가 이 모델을 만든 코드다.",
+    "gitCommitAtGenerationTime": "46ba32fe0cf6e75d55e7fc67d8102dcd2134dd4a",
+    "gitCommitNote": "이 값은 evaluate.ts 실행 시점의 HEAD다. model-manifest.json 자체가 training/ 코드와 같은 커밋으로 함께 커밋되므로, 이 커밋 해시 하나만으로는 생성 코드를 재현할 수 없다(리뷰 지적) — 위 digest를 신뢰하거나, 이 manifest 파일이 실제로 들어있는 커밋(git log -- training/model/model-manifest.json)을 봐야 한다."
+  },
   "license": "저장소 프로젝트 라이선스 미확정 — README.md '라이선스·권리' 참고",
   "evaluationConfigAndResults": "training/model/eval-report.json (이 파일과 같은 커밋에서 생성)"
 }

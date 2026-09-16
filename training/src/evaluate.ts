@@ -2,9 +2,16 @@
 // docs/data-learning.md: "결과가 나빠도 숨기지 않는다", "미평가 맵은 성능 보장하지 않는다".
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { FIXED_DT_S, ParkingEngine, type Command, type Observation, type Scenario } from "../../engine/src/index.js";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  FIXED_DT_S,
+  ParkingEngine,
+  normalizeAngle,
+  type Command,
+  type Observation,
+  type Scenario,
+} from "../../engine/src/index.js";
 import { createLearnedController } from "./policyController.js";
 import { loadModelFromDisk } from "./modelIO.js";
 
@@ -25,7 +32,18 @@ interface EpisodeResult {
   totalSimTimeS: number;
 }
 
-function runLearnedEpisode(scenario: Scenario, controller: (o: Observation) => Command): EpisodeResult {
+/** 단위 테스트에서 -pi/+pi 경계 회귀를 직접 검사할 수 있도록 순수 함수로 뺐다. */
+export function computeFinalErrors(
+  poseTruth: { xM: number; yM: number; yawRad: number },
+  goalPose: { xM: number; yM: number; yawRad: number }
+): { positionErrorM: number; yawErrorRad: number } {
+  return {
+    positionErrorM: Math.hypot(poseTruth.xM - goalPose.xM, poseTruth.yM - goalPose.yM),
+    yawErrorRad: Math.abs(normalizeAngle(poseTruth.yawRad - goalPose.yawRad)),
+  };
+}
+
+export function runLearnedEpisode(scenario: Scenario, controller: (o: Observation) => Command): EpisodeResult {
   const engine = new ParkingEngine();
   let observation = engine.reset(scenario);
   let outcome = { terminated: false, reason: null as string | null };
@@ -47,10 +65,9 @@ function runLearnedEpisode(scenario: Scenario, controller: (o: Observation) => C
   }
 
   const logComplete = outcome.terminated;
-  const finalPositionErrorM = logComplete
-    ? Math.hypot(poseTruth.xM - scenario.goalPose.xM, poseTruth.yM - scenario.goalPose.yM)
-    : null;
-  const finalYawErrorRad = logComplete ? Math.abs(poseTruth.yawRad - scenario.goalPose.yawRad) : null;
+  const finalErrors = logComplete ? computeFinalErrors(poseTruth, scenario.goalPose) : null;
+  const finalPositionErrorM = finalErrors?.positionErrorM ?? null;
+  const finalYawErrorRad = finalErrors?.yawErrorRad ?? null;
 
   return {
     scenarioId: scenario.scenarioId,
@@ -75,6 +92,25 @@ function gitCommit(): string {
   } catch {
     return "unknown";
   }
+}
+
+/**
+ * git commit만으로는 재현 소스를 못 밝힌다 — 이 manifest 자체가 training/src/ 코드와 같은
+ * 커밋에 함께 들어가므로, evaluate.ts 실행 시점의 `git rev-parse HEAD`는 아직 그 커밋이
+ * 생성되기 전(부모 커밋)을 가리킨다(리뷰 지적: 이전 버전의 codeCommit=c58b7a9에는
+ * training/ 코드 자체가 없었다). git 커밋 시점과 무관하게 재현 가능하도록, 실제 소스
+ * 파일 내용의 해시를 같이 남긴다 — "이 해시가 나오는 training/src/*.ts가 이 모델을 만든
+ * 코드"라는 뜻이다.
+ */
+function trainingSourceDigestSha256(): string {
+  const srcDir = `${HERE}`;
+  const fileNames = readdirSync(srcDir).filter((f) => f.endsWith(".ts")).sort();
+  const hash = createHash("sha256");
+  for (const fileName of fileNames) {
+    hash.update(fileName);
+    hash.update(readFileSync(`${srcDir}${fileName}`));
+  }
+  return hash.digest("hex");
 }
 
 async function main() {
@@ -124,7 +160,14 @@ async function main() {
   const datasetSummary: Array<{ scenarioId: string; bucket: string; usedForTraining: boolean }> = JSON.parse(
     readFileSync(`${DATA_DIR}/summary.json`, "utf8")
   );
-  const usedScenarioIds = datasetSummary.filter((s) => s.usedForTraining).map((s) => s.scenarioId);
+  // bucket을 반드시 구분한다 — 예전 버전은 usedForTraining만 봐서 validation(pillar)이
+  // trainScenarioIds에 잘못 섞여 들어갔다(리뷰 지적).
+  const trainScenarioIds = datasetSummary
+    .filter((s) => s.bucket === "train" && s.usedForTraining)
+    .map((s) => s.scenarioId);
+  const validationScenarioIds = datasetSummary
+    .filter((s) => s.bucket === "validation" && s.usedForTraining)
+    .map((s) => s.scenarioId);
   const excludedScenarioIds = datasetSummary
     .filter((s) => (s.bucket === "train" || s.bucket === "validation") && !s.usedForTraining)
     .map((s) => s.scenarioId);
@@ -145,15 +188,23 @@ async function main() {
     },
     supportedVehicle: "synthetic-compact-v1 (examples/scenarios 참고) — 다른 차종/센서 배치는 미지원",
     trainDataSnapshot: {
-      trainScenarioIds: usedScenarioIds,
+      trainScenarioIds,
+      validationScenarioIds,
       excludedScenarioIds,
       note:
         excludedScenarioIds.length > 0
           ? `${excludedScenarioIds.join(", ")}은 Hybrid A*가 success로 마치지 못해 이번 학습에서 제외됨(#11 알려진 한계, README 참고)`
-          : "이번 실행에서는 후보 scenario 전부 성공적으로 rollout을 만들어 학습에 사용함",
+          : "이번 실행에서는 후보 scenario 전부 성공적으로 rollout을 만들어 학습·검증에 사용함",
     },
     trainConfig: trainRun,
-    codeCommit: gitCommit(),
+    sourceProvenance: {
+      trainingSourceDigestSha256: trainingSourceDigestSha256(),
+      digestNote:
+        "training/src/*.ts 전체(파일명순 정렬) 내용의 SHA-256 — 이 값이 나오는 소스가 이 모델을 만든 코드다.",
+      gitCommitAtGenerationTime: gitCommit(),
+      gitCommitNote:
+        "이 값은 evaluate.ts 실행 시점의 HEAD다. model-manifest.json 자체가 training/ 코드와 같은 커밋으로 함께 커밋되므로, 이 커밋 해시 하나만으로는 생성 코드를 재현할 수 없다(리뷰 지적) — 위 digest를 신뢰하거나, 이 manifest 파일이 실제로 들어있는 커밋(git log -- training/model/model-manifest.json)을 봐야 한다.",
+    },
     license: "저장소 프로젝트 라이선스 미확정 — README.md '라이선스·권리' 참고",
     evaluationConfigAndResults: "training/model/eval-report.json (이 파일과 같은 커밋에서 생성)",
   };
@@ -161,7 +212,12 @@ async function main() {
   console.log(`\nmodel manifest: ${MODEL_DIR}/model-manifest.json`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+// 테스트 파일이 computeFinalErrors/runLearnedEpisode를 import할 때 main()이 같이 실행되지
+// 않도록(모델/데이터 파일이 없으면 process.exit(1)로 테스트가 죽는다) 직접 실행될 때만 돈다.
+const isMainModule = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMainModule) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

@@ -1,13 +1,15 @@
 // #11: train.json(+validation.json)으로 작은 MLP를 행동복제 학습시키고 모델을 저장한다.
 import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import * as tf from "@tensorflow/tfjs";
+import { createRng } from "../../engine/src/index.js";
 import { buildModel } from "./model.js";
 import { saveModelToDisk } from "./modelIO.js";
 
 const HERE = fileURLToPath(new URL(".", import.meta.url));
 const DATA_DIR = `${HERE}../data`;
 const MODEL_DIR = `${HERE}../model`;
+const SEED = 42; // buildModel의 가중치 초기화 + 아래 셔플 둘 다 여기서만 정한다.
 
 interface Sample {
   features: number[];
@@ -21,25 +23,41 @@ function toTensors(samples: Sample[]): { xs: tf.Tensor2D; ys: tf.Tensor2D } {
   };
 }
 
+/** Fisher-Yates, engine의 seed 기반 PRNG로 — Math.random()을 쓰면 재현이 안 된다. */
+export function seededShuffle<T>(items: T[], seed: number): T[] {
+  const rng = createRng(seed);
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
+  }
+  return shuffled;
+}
+
 async function main() {
-  const trainSamples: Sample[] = JSON.parse(readFileSync(`${DATA_DIR}/train.json`, "utf8"));
+  const trainSamplesRaw: Sample[] = JSON.parse(readFileSync(`${DATA_DIR}/train.json`, "utf8"));
   const validationSamples: Sample[] = JSON.parse(readFileSync(`${DATA_DIR}/validation.json`, "utf8"));
 
-  if (trainSamples.length === 0) {
+  if (trainSamplesRaw.length === 0) {
     throw new Error("train.json이 비어 있습니다 — generate-dataset을 먼저 실행하고, 성공한 rollout이 있는지 확인하세요.");
   }
+
+  // model.fit의 shuffle:true는 tfjs 내부적으로 Math.random을 써서 재현이 안 된다(리뷰 지적).
+  // 대신 여기서 한 번 결정론적으로 섞어두고 fit에는 shuffle:false를 준다 — 매 epoch 재셔플은
+  // 포기하지만(작은 데이터셋이라 학습 품질에 미치는 영향은 적다고 판단), 같은 seed로 다시
+  // 돌리면 가중치 초기화·데이터 순서가 완전히 같아 실제로 재현 가능하다.
+  const trainSamples = seededShuffle(trainSamplesRaw, SEED);
 
   const { xs: trainXs, ys: trainYs } = toTensors(trainSamples);
   const hasValidation = validationSamples.length > 0;
   const validationTensors = hasValidation ? toTensors(validationSamples) : null;
 
-  const model = buildModel();
-  const seed = 42; // 재현성 — model manifest에도 같은 값을 기록한다.
+  const model = buildModel(SEED);
 
   const history = await model.fit(trainXs, trainYs, {
     epochs: 200,
     batchSize: 32,
-    shuffle: true,
+    shuffle: false, // 위에서 이미 결정론적으로 섞음
     validationData: validationTensors ? [validationTensors.xs, validationTensors.ys] : undefined,
     verbose: 0,
     callbacks: {
@@ -63,9 +81,11 @@ async function main() {
     `${MODEL_DIR}/train-run.json`,
     JSON.stringify(
       {
-        seed,
+        seed: SEED,
+        seedAppliedTo: ["buildModel() kernelInitializer(glorotUniform)", "train.json 사전 셔플"],
         epochs: 200,
         batchSize: 32,
+        shuffle: "사전 셔플 1회(seed 기반), epoch별 재셔플 없음",
         trainSamples: trainSamples.length,
         validationSamples: validationSamples.length,
         finalTrainLoss: finalLoss,
@@ -81,7 +101,11 @@ async function main() {
   console.log(`모델을 ${MODEL_DIR}/model.json 에 저장했습니다.`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+// 테스트가 seededShuffle을 import할 때 전체 학습이 같이 돌지 않도록 직접 실행될 때만 돈다.
+const isMainModule = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMainModule) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

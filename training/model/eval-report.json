@@ -1,6 +1,6 @@
 {
-  "evaluatedAt": "2026-09-16T02:27:29.060Z",
-  "codeCommit": "c58b7a968f64d413a21deabda59547c00075ff4e",
+  "evaluatedAt": "2026-09-16T06:56:36.747Z",
+  "codeCommit": "46ba32fe0cf6e75d55e7fc67d8102dcd2134dd4a",
   "heldoutScenarioCount": 1,
   "successRate": 0,
   "collisionRate": 1,
@@ -12,10 +12,10 @@
       "success": false,
       "collided": true,
       "timedOut": false,
-      "stepCount": 94,
-      "finalPositionErrorM": 4.257058622702616,
-      "finalYawErrorRad": 0.6078843195895844,
-      "totalSimTimeS": 4.699999999999991
+      "stepCount": 88,
+      "finalPositionErrorM": 4.274935725521424,
+      "finalYawErrorRad": 0.610173441548961,
+      "totalSimTimeS": 4.399999999999992
     }
   ],
   "limitations": [
