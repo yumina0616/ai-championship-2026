@@ -27,3 +27,4 @@ training/data/
 test-results/
 playwright-report/
 .vite/
+server/.local-data/

@@ -18,6 +18,38 @@ export interface ParkingMap {
 }
 export const MAP_BYTES = 128 * 1024;
 export const MAX_OBSTACLES = 24;
+export const MAP_LINK_LIMIT = 16000;
+export function mapLink(map: ParkingMap, base: string): string {
+  const clean = parseMap(JSON.stringify(map));
+  const bytes = new TextEncoder().encode(JSON.stringify(clean));
+  const encoded = btoa(
+    Array.from(bytes, (b) => String.fromCharCode(b)).join(""),
+  )
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "");
+  if (encoded.length > MAP_LINK_LIMIT)
+    throw Error("링크로 전달하기엔 맵이 커요. 파일 공유를 이용해주세요.");
+  const url = new URL(base);
+  url.search = "";
+  url.hash = `map=${encoded}`;
+  return url.toString();
+}
+export function mapFromHash(hash: string): ParkingMap | null {
+  if (!hash.startsWith("#map=")) return null;
+  const value = hash.slice(5);
+  if (
+    !value ||
+    value.length > MAP_LINK_LIMIT ||
+    !/^[A-Za-z0-9_-]+$/.test(value)
+  )
+    throw Error("공유 링크가 손상됐거나 너무 길어요.");
+  const bytes = Uint8Array.from(
+    atob(value.replaceAll("-", "+").replaceAll("_", "/")),
+    (c) => c.charCodeAt(0),
+  );
+  return parseMap(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+}
 export function newMap(template: TemplateId): ParkingMap {
   const s = makeScenario(template);
   if (template === "pillar")

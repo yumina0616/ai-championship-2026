@@ -246,9 +246,9 @@ test("랜딩·차고 선택·키보드·모델 준비 상태·가이드", async 
   ).toBeChecked();
   await page.getByRole("radio", { name: /마스코트/ }).check();
   await expect(
-    page.getByRole("button", { name: "학습 모델 준비 중" }),
-  ).toBeDisabled();
-  await expect(page.getByRole("status")).toContainText("아직 운전하지");
+    page.getByRole("button", { name: "마스코트 운전 보기" }),
+  ).toBeEnabled();
+  await expect(page.getByRole("status")).toContainText("0/1");
   await page.getByRole("button", { name: "조작 가이드" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");

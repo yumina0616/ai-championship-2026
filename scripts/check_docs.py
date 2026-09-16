@@ -26,7 +26,7 @@ def check(root):
     for directory in ("docs", "examples", ".github"):
         markdown_paths.extend((root / directory).rglob("*.md"))
     # 패키지 설명서는 검사하되 node_modules/dist는 순회하지 않습니다.
-    for directory in ("web", "engine"):
+    for directory in ("web", "engine", "training", "server"):
         markdown_paths.extend((root / directory).glob("*.md"))
     for path in markdown_paths:
         markdown_count += 1

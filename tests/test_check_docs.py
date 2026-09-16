@@ -42,6 +42,13 @@ class CheckDocsTests(unittest.TestCase):
         self.write("examples/nonfinite.json", '{"x": NaN}')
         self.assertEqual(len(check(self.root)[0]), 2)
 
+    def test_training_and_local_server_readmes(self):
+        for folder in ("training", "server"):
+            (self.root / folder).mkdir()
+            self.write(f"{folder}/README.md", "[없음](missing.md)")
+        self.assertEqual(check(self.root)[1], 2)
+        self.assertEqual(len(check(self.root)[0]), 2)
+
     def test_escaped_space_and_code_not_checked(self):
         self.write("docs/a b.md", "# 문서")
         self.write("README.md", '[문서](docs/a%20b.md) [문서](<docs/a b.md>)\n'

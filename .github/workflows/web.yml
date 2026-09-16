@@ -47,6 +47,13 @@ jobs:
           PARKSIDE_TEST_MESA: "1"
           LIBGL_ALWAYS_SOFTWARE: "1"
           GALLIUM_DRIVER: llvmpipe
+      - run: xvfb-run -a npm run test:production
+        if: matrix.shard == 1
+        working-directory: web
+        env:
+          PARKSIDE_TEST_MESA: "1"
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          GALLIUM_DRIVER: llvmpipe
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -75,3 +82,17 @@ jobs:
         working-directory: training
       - run: npm test
         working-directory: training
+  local-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run test:local-api
+        working-directory: web

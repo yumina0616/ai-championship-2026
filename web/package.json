@@ -11,23 +11,29 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "playwright test",
-    "test:ui": "playwright test --ui"
+    "test:ui": "playwright test --ui",
+    "test:production": "npm run build && playwright test -c playwright.production.config.ts",
+    "build:local-api": "tsc -p tsconfig.server.json && esbuild ../server/main.ts ../server/api.test.ts --bundle --platform=node --format=esm --outdir=../server/dist --out-extension:.js=.mjs",
+    "test:local-api": "npm run build:local-api && node --test ../server/dist/api.test.mjs",
+    "dev:local-api": "npm run build:local-api && node ../server/dist/main.mjs"
   },
   "dependencies": {
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.0.0",
+    "@tensorflow/tfjs": "4.22.0",
+    "lucide-react": "^0.468.0",
     "react": "~19.2.0",
     "react-dom": "~19.2.0",
-    "three": "^0.180.0",
-    "@react-three/fiber": "^9.0.0",
-    "@react-three/drei": "^10.0.0",
-    "lucide-react": "^0.468.0"
+    "three": "^0.180.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^5.0.0",
-    "vite": "^7.0.0",
+    "esbuild": "0.28.2",
     "typescript": "~5.9.0",
-    "@playwright/test": "^1.55.0"
+    "vite": "^7.0.0"
   }
 }

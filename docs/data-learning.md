@@ -1,6 +1,6 @@
 # 데이터·학습·평가 원칙
 
-상태: 브라우저 로컬 기록·파일 검증·상태 재생은 [로컬 기록 안내](local-episodes.md)에 구현되어 있습니다. 서버 수집 시스템·학습 모델·측정 결과는 아직 없습니다. 초기 학습 [#11](https://github.com/yumina0616/ai-championship-2026/issues/11), 기여 동의/서버 저장 [#13](https://github.com/yumina0616/ai-championship-2026/issues/13), 지속 개선 [#17](https://github.com/yumina0616/ai-championship-2026/issues/17)은 후속 범위입니다.
+상태: 브라우저 로컬 기록·파일 검증·상태 재생은 [로컬 기록 안내](local-episodes.md), #11 초기 모델은 [학습 안내](../training/README.md), #12 웹 실시간 추론은 [마스코트 안내](mascot.md)에 구현되어 있습니다. 모델의 소규모 heldout 결과는 성공 0/1·충돌 1/1이며 일반화를 주장하지 않습니다. 실제 사용자 서버 수집·기여 데이터 재학습은 아직 하지 않습니다. 기여 동의/서버 저장 [#13](https://github.com/yumina0616/ai-championship-2026/issues/13), 지속 개선 [#17](https://github.com/yumina0616/ai-championship-2026/issues/17)을 구분합니다.
 
 ## 데이터는 무엇을 위한 것인가
 

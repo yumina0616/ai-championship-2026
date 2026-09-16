@@ -1,6 +1,6 @@
 # PARKSIDE 웹 개발 안내
 
-관련 Issue: #4 웹 기본 화면, #6 편집기, #8 수동 주행. PARKSIDE는 디자인용 임시 이름입니다. 이 변경만으로 세 Issue 전체가 완료되는 것은 아닙니다.
+관련 Issue: #6 편집기, #10 기록, #12 마스코트, #14 비교, #13 공유와 기여 준비. PARKSIDE는 디자인용 임시 이름입니다. #4/#8의 남은 공개 환경 검증은 #15로 이관했습니다.
 
 ## 지금 실행되는 것
 
@@ -17,7 +17,7 @@
 - 실제 ray-box 센서 36개의 거리 시각화. 무잡음이며 위치는 시뮬레이션의 이상적인 자기 위치입니다.
 - 초기 정적 리소스 실패/8초 timeout/재시도/취소, 모바일 레이아웃, 키보드 선택·포커스 복귀.
 
-**아직 없는 것:** 차종 선택·학습 모델·서버 공유 링크·기여 업로드·공개 배포. 맵 편집·로컬 Episode 저장/내보내기·상태 재생은 제공합니다. 마스코트는 준비 중 안내만 보여주고 시작 버튼을 비활성화합니다. 가짜 관전 결과는 만들지 않습니다. 엔진의 기준 제어기 역시 학습 정책이 아닙니다.
+**구현한 것:** 맵 편집·로컬 Episode·상태 재생과 [실제 마스코트 추론](../docs/mascot.md)을 제공합니다. **아직 없는 것:** 차종 선택·외부 서버 기여·공개 배포. 모델은 초기 실험 단계이며 heldout 성공 0/1입니다. 엔진의 기준 제어기와 오프닝 재생은 학습 정책이 아닙니다.
 
 ## 실행과 검사
 
@@ -40,7 +40,9 @@ npx playwright install chromium
 npm test
 ```
 
-Playwright는 Chromium으로 랜딩/환경 선택, P 고정·D/R·이동 중 변속 거부, 브레이크/키 해제, 일시정지/창 이탈, 준비 중 모델, 실패/취소/timeout, 실제 충돌, WebGL 실패 중단, 두 탭 독립, 모바일 노출과 모션 감소 설정을 검사합니다. 추가로 드래그·기어 단축키·CDP 두 손가락 터치 입력을 검사합니다. 경고음 테스트는 AudioContext를 계측 대역으로 바꿔 실제 센서 접근 중 발생한 음원 예약/해제/정지를 검사하며, 스피커의 실제 음량·청취 품질까지 확인한 것은 아닙니다. 별도 `driver-controls.spec.ts`와 `sensor-feedback.spec.ts`는 입력 변환·센서 결측/미검출·원시 거리/차체 여유·조향 연장선을 검증합니다. 모바일 폭/터치 에뮬레이션은 실제 iOS Safari 검증을 대신하지 않습니다. 스크린샷과 실패 trace는 `web/test-results/`에 생성되며 Git에는 넣지 않습니다.
+Playwright는 Chromium으로 랜딩/환경 선택, P 고정·D/R·이동 중 변속 거부, 브레이크/키 해제, 일시정지/창 이탈, 실제 모델 추론, 실패/취소/timeout, 실제 충돌, WebGL 실패 중단, 두 탭 독립, 모바일 노출과 모션 감소 설정을 검사합니다. 추가로 드래그·기어 단축키·CDP 두 손가락 터치 입력을 검사합니다. 경고음 테스트는 AudioContext를 계측 대역으로 바꿔 실제 센서 접근 중 발생한 음원 예약/해제/정지를 검사하며, 스피커의 실제 음량·청취 품질까지 확인한 것은 아닙니다. 별도 `driver-controls.spec.ts`와 `sensor-feedback.spec.ts`는 입력 변환·센서 결측/미검출·원시 거리/차체 여유·조향 연장선을 검증합니다. 모바일 폭/터치 에뮬레이션은 실제 iOS Safari 검증을 대신하지 않습니다. 스크린샷과 실패 trace는 `web/test-results/`에 생성되며 Git에는 넣지 않습니다.
+
+추가 검사: `mascot.spec.ts` 실제 가중치·지원 규격·tensor 해제/수동 입력 차단, `compare.spec.ts` 동일 조건·실패 포함 지표, `share-link.spec.ts` 맵 최소 필드 링크·적용, `contribution.spec.ts` 개발용 동의 UI입니다. `npm --prefix web run test:local-api`는 별도의 실제 loopback HTTP 테스트이며 [실제 사용자 업로드가 아닌 합성 테스트](../server/README.md)만 허용합니다.
 
 ## 다음 담당자가 읽을 코드
 
@@ -56,6 +58,10 @@ Playwright는 Chromium으로 랜딩/환경 선택, P 고정·D/R·이동 중 변
 | `src/ParkingFeedback.tsx` | 엔진의 읽기 전용 주차 조건과 정지 유지 시간을 표시. 별도 평가/타이머를 만들지 않음 |
 | `src/ParkingScene.tsx` | 차량·주차장·거리선 렌더링. 물리·센서를 다시 계산하지 않음 |
 | `src/preview.ts` | 한국어 선택지와 배포 리소스 버전 확인. 엔진/추론 API가 아님 |
+| `src/policy.ts`, `src/policy-info.ts` | 고정 artifact·가중치 체크섬·지원 규격·CPU 추론·tensor 수명 |
+| `src/EpisodeCompare.tsx` | 동일 초기조건 검증 후 지표/경로 비교·관측 차이 안내 |
+| `src/SharedMap.tsx`, `src/MapShare.tsx` | 맵 최소 필드 URL·파일 공유와 명시적 수신 적용 |
+| `src/LocalContributionTest.tsx` | 개발 모드에서만 표시하는 합성 기록 테스트, production 제거 |
 | `src/styles.css` | 색상 토큰, 레이아웃, 반응형, 포커스·감소된 모션 |
 | `src/cinema.css` | 시네마틱 색상·랜딩·오프닝·같은 Canvas의 영역 전환. 기존 조작 레이아웃 위에 적용 |
 | `tests/app.spec.ts` | 실제 브라우저 회귀 테스트 |
@@ -69,7 +75,7 @@ Playwright는 Chromium으로 랜딩/환경 선택, P 고정·D/R·이동 중 변
 - 실행 시작 시 `structuredClone(scenario)`로 reset합니다. 실행 중 환경 변경은 막습니다. 키 해제·pointercancel·포커스 이탈·unmount에서 입력을 정리합니다. 일시정지는 시뮬레이션 시간을 멈추는 기능이지 실제 차량 제동 모델이 아닙니다.
 - 가장 가까운 감지점의 원시값은 **차량 중심 센서의 거리**입니다. HUD의 광선 차체 여유는 해당 ray의 원시 거리에서 ray가 차량 직사각형을 빠져나오는 길이를 뺀 파생값입니다. 최근접 유클리드 거리나 실제 범퍼 초음파 센서가 아닙니다. 현재 센서는 장애물 박스를 감지하고, world bounds 충돌은 별도로 판단합니다. 장식 나무·표지·스카이라인·외곽 시설·스토퍼는 센서/충돌 장애물이 아닙니다.
 - 주차 차량과 기둥은 `Scenario.obstacles`에서 직접 렌더링합니다. 목표칸의 채움·외곽선·화살표는 `goalSpace`에서 생성하며 선의 중심이 판정 경계입니다. 나머지 주차선·데크는 프리셋 전용 장식입니다. #6 자유 편집에서는 경계까지 Scenario에서 생성하고, 임의 JSON을 현재 제한적인 엔진 검증에 바로 통과시키지 말고 양수 제원·크기/개수·겹침·경계 검증부터 추가해야 합니다.
-- `runtime.json`은 정적 배포 리소스 확인용이며 주행 데이터나 정책을 반환하지 않습니다. 관전은 준비 화면일 뿐입니다. #11 정책 연결 시 같은 observation/command/step 경로를 사용하고 `controller_kind`와 정책 버전을 표시하세요.
+- `runtime.json`은 정적 배포 리소스 확인용이며 주행 데이터나 정책을 반환하지 않습니다. 학습 관전은 같은 observation/command/step 경로에서 별도 고정 모델을 실행하며 `controllerKind=learned`와 정책 체크섬을 기록합니다. [마스코트 경계](../docs/mascot.md)를 따릅니다.
 
 ## 디자인 원칙
 
@@ -99,13 +105,13 @@ SENSE는 엔진 reset 시 계산한 현재 배치의 가상 거리 광선과 원
 
 ## 배포와 남은 검증
 
-사용자 결정에 따라 공개 배포는 당장 진행하지 않고 로컬 개발을 먼저 합니다. #4의 공개 preview 완료 조건은 남겨둡니다.
+사용자 결정에 따라 공개 배포는 하지 않습니다. 공개 URL·실기기·운영 점검은 #15에 남겨둡니다.
 
 `npm --prefix web run build` 결과인 `web/dist/`는 정적 호스팅용입니다. `.github/workflows/web.yml`은 엔진/웹을 검사하고 `parking-web-preview` artifact를 올립니다. **artifact 업로드는 공개 배포가 아닙니다.**
 
-호스팅 프로젝트를 생성할 때 저장소 루트를 기준으로 설치 `npm --prefix web ci`, 빌드 `npm --prefix web run build`, 출력 폴더 `web/dist`를 지정하세요. `web`만 복사하면 형제 폴더인 `engine` import가 깨집니다. 서버 Secret이나 DB 설정은 이 버전에서 필요하지 않습니다. GitHub Pages를 사용할 경우 소유자가 Pages 설정과 배포 워크플로를 별도로 활성화해야 합니다.
+호스팅 프로젝트를 생성할 때 저장소 루트를 기준으로 설치 `npm --prefix web ci`, 빌드 `npm --prefix web run build`, 출력 폴더 `web/dist`를 지정하세요. `web`만 복사하면 형제 `engine`, `training/src/features.ts`, `training/model` import가 깨집니다. 학습 패키지의 별도 npm 설치/재학습 없이 고정 모델을 번들링합니다. 실제 기여 수집이 꺼진 정적 웹은 서버 Secret이나 DB 설정이 필요하지 않습니다. `server/`는 개발용이며 공개 배포하지 않습니다. GitHub Pages를 사용할 경우 소유자가 Pages 설정과 배포 워크플로를 별도로 활성화해야 합니다.
 
-Three.js 계열 chunk가 크다는 Vite 경고가 있습니다. 로컬 빌드는 통과하지만 실제 모바일 네트워크 초기 로딩 시간은 아직 측정하지 않았습니다. 공개 URL에서 새로고침·runtime.json·3D chunk 경로, 실기기 WebGL/Safari·터치, 장시간 세션을 추가 확인한 뒤 #4의 공개 preview 완료 조건을 닫습니다.
+Three.js 및 TensorFlow 정책 chunk가 크다는 Vite 경고가 있습니다. 정책은 선택할 때만 로딩하지만 실제 모바일 네트워크 초기 로딩 시간은 아직 측정하지 않았습니다. 공개 URL에서 새로고침·runtime.json·3D/정책 chunk·가중치 경로, 실기기 WebGL/Safari·터치, 장시간 세션을 추가 확인한 뒤 #15 공개 검증을 완료합니다.
 
 ## 수동 조작의 범위와 한계
 
