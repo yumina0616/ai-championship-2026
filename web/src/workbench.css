@@ -137,3 +137,21 @@
     min-height: 230px;
   }
 }
+.episode-list {
+  list-style: none;
+  padding: 0;
+}
+.episode-list li {
+  padding: 16px 0;
+  border-bottom: 1px solid #3c4842;
+  font-size: 13px;
+}
+.record-player {
+  margin-top: 24px;
+}
+.record-player .map-canvas {
+  max-height: 420px;
+}
+.record-player h3 {
+  font-size: 18px;
+}
