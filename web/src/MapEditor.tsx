@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { vehicleFootprint, type OrientedRect } from "../../engine/src/index";
 import {
-  downloadJson,
   MAP_BYTES,
   mapError,
   mapScenario,
@@ -12,6 +11,7 @@ import {
 } from "./maps";
 import type { TemplateId } from "./preview";
 import "./workbench.css";
+import MapShare from "./MapShare";
 
 export default function MapEditor({
   template,
@@ -27,6 +27,7 @@ export default function MapEditor({
   );
   const [selected, select] = useState("start");
   const [notice, setNotice] = useState("");
+  const [sharing, setSharing] = useState<ParkingMap | null>(null);
   const drag = useRef<{
     id: number;
     x: number;
@@ -333,9 +334,7 @@ export default function MapEditor({
         </button>
         <button
           disabled={!!error}
-          onClick={() =>
-            downloadJson(parseMap(JSON.stringify(map)), "parkside-map.json")
-          }
+          onClick={() => setSharing(parseMap(JSON.stringify(map)))}
         >
           맵 파일 내보내기
         </button>
@@ -364,6 +363,7 @@ export default function MapEditor({
           />
         </label>
       </div>
+      {sharing && <MapShare map={sharing} onClose={() => setSharing(null)} />}
     </details>
   );
 }

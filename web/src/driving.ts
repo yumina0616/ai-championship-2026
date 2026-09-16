@@ -163,7 +163,11 @@ export function reverseGuide(
   }
   return rails;
 }
-export function useDriving(template: TemplateId, customScenario?: Scenario) {
+export function useDriving(
+  template: TemplateId,
+  customScenario?: Scenario,
+  recordLocally = true,
+) {
   const scenario = useMemo(
     () => customScenario ?? makeScenario(template),
     [template, customScenario],
@@ -455,12 +459,14 @@ export function useDriving(template: TemplateId, customScenario?: Scenario) {
     start: () => {
       if (reset()) {
         setStorageError("");
-        recording.current = beginEpisode(
-          scenario,
-          motion.current.current!,
-          context.current,
-        );
-        persist(finishEpisode(recording.current, "incomplete"));
+        if (recordLocally) {
+          recording.current = beginEpisode(
+            scenario,
+            motion.current.current!,
+            context.current,
+          );
+          persist(finishEpisode(recording.current, "incomplete"));
+        }
         setActive(true);
       }
     },
