@@ -40,6 +40,8 @@ import type { CameraMode } from "./ParkingScene";
 import SensorAssist, { sensorFeedback } from "./SensorAssist";
 import ParkingFeedback, { parkingMessage } from "./ParkingFeedback";
 import { chapterAt, storyChapters } from "./story";
+import MapEditor from "./MapEditor";
+import type { ParkingMap } from "./maps";
 const ParkingScene = lazy(() => import("./ParkingScene"));
 
 function Logo() {
@@ -104,6 +106,7 @@ function Buddy() {
 export default function App() {
   const [view, setView] = useState<"landing" | "drive">("landing");
   const [template, setTemplate] = useState<TemplateId>("open");
+  const [customMap, setCustomMap] = useState<ParkingMap | null>(null);
   const [mode, setMode] = useState<Mode>("human");
   const [camera, setCamera] = useState<CameraMode>("orbit");
   const [sensors, setSensors] = useState(false);
@@ -750,7 +753,7 @@ export default function App() {
                 <p>
                   같은 자리, 다른 시도. 나만의 움직임을 찾아보세요.
                   <br />
-                  지금은 3개의 고정 환경. 자유 편집은 준비 중이에요.
+                  템플릿으로 시작하거나 나만의 주차장을 편집해보세요.
                 </p>
               </div>
               <fieldset className="mission-list">
@@ -792,6 +795,13 @@ export default function App() {
                   </label>
                 ))}
               </fieldset>
+              <MapEditor template={template} onApply={setCustomMap} />
+              {customMap && (
+                <p className="availability">
+                  편집한 맵: {customMap.name} · 운전 연결은 다음 PR에서
+                  제공해요.
+                </p>
+              )}
               <div className="garage-console">
                 <div className="car-spec">
                   <span className="spec-icon">

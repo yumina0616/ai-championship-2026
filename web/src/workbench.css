@@ -1,0 +1,139 @@
+.workbench {
+  margin: 24px 0;
+  padding: 24px;
+  border: 1px solid #404545;
+  border-radius: 12px;
+  background: #181c1d;
+  color: #edf0ef;
+  text-align: left;
+}
+.workbench summary {
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 650;
+}
+.workbench summary span {
+  font: 11px monospace;
+  color: #aab7b4;
+  margin-left: 12px;
+}
+.workbench p {
+  color: #b5c1bd;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.workbench label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  margin: 10px 0;
+  color: #c7d1ce;
+}
+.workbench input,
+.workbench select {
+  font: inherit;
+  color: #f1f4f2;
+  background: #252b2b;
+  border: 1px solid #59625f;
+  border-radius: 4px;
+  padding: 10px;
+  min-width: 0;
+  max-width: 100%;
+}
+.workbench button,
+.workbench .file-button {
+  border: 1px solid #616e68;
+  color: #f3f7f5;
+  background: #283430;
+  border-radius: 5px;
+  padding: 11px 14px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.4;
+  margin: 0;
+}
+.workbench button:hover {
+  background: #3a4b43;
+}
+.workbench button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.workbench :focus-visible {
+  outline: 2px solid #cdfcbd;
+  outline-offset: 3px;
+}
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 24px;
+  align-items: center;
+}
+.map-canvas {
+  width: 100%;
+  touch-action: none;
+  background: #101515;
+  border-radius: 8px;
+}
+.map-object {
+  cursor: grab;
+  color: #f4f4ee;
+}
+.map-object rect {
+  fill: #586769;
+  stroke: #92a5a7;
+}
+.map-object.goal rect {
+  fill: #38634855;
+  stroke: #b4e3bd;
+  stroke-dasharray: 0.15;
+}
+.map-object.start rect {
+  fill: #e6e8e0;
+  stroke: #fff;
+}
+.map-object.start {
+  color: #151e1b;
+}
+.map-object.selected rect {
+  stroke: #eaff8f;
+  stroke-width: 0.1;
+}
+.workbench-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.file-button input {
+  max-width: 230px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.editor-inspector {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .workbench {
+    padding: 16px;
+  }
+  .editor-layout {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .editor-inspector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 12px;
+  }
+  .workbench summary span {
+    display: block;
+    margin: 8px 0;
+  }
+  .map-canvas {
+    min-height: 230px;
+  }
+}

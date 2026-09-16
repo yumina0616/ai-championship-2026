@@ -90,3 +90,25 @@ git diff --check
 ## 매일 공유
 
 각자 Issue 댓글에 오늘 완료, 다음 할 일, 막힌 계약/결정, PR 링크를 남깁니다. 엔진/좌표/데이터 계약 변경은 채팅 합의만으로 끝내지 않고 문서 PR에 기록합니다.
+
+## 브라우저 CI 실패를 다룰 때
+
+Linux CI는 Xvfb 가상 화면에서 실제 Chromium을 열고 Mesa llvmpipe로 WebGL을 렌더링합니다. 이는 CPU 그래픽 드라이버이며 가상 센서/물리/충돌을 mock하는 설정이 아닙니다. `glxinfo -B` 결과를 CI 로그에 남깁니다. 일반 로컬 테스트는 headless Chromium/SwANGLE을 사용합니다. 이 설정은 테스트 브라우저에만 적용되며 배포 앱은 바꾸지 않습니다.
+
+CI의 소프트웨어 GPU 차단 목록만 `--ignore-gpu-blocklist`로 해제합니다. 테스트 시작 전 `tests/check-webgl.ts`에서 실제 Chromium의 WebGL2 초기화·llvmpipe 드라이버·빨간 픽셀 출력을 검증합니다. 사전 검사가 실패하면 환경 오류로 즉시 종료하며, 빈 Canvas에서 UI만 검사하고 통과시키지 않습니다. 이 브라우저는 저장소의 로컬 테스트 페이지 전용입니다.
+
+Ubuntu에서 CI 그래픽 경로를 재현하려면 의존성 설치 후 `web/`에서 다음을 실행합니다. 기존 5173 dev server는 로컬에서 재사용하며, CI는 별도 서버를 시작합니다.
+
+```bash
+npx playwright install --with-deps chromium
+sudo apt-get install -y xvfb libgl1-mesa-dri mesa-utils
+PARKSIDE_TEST_MESA=1 LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe xvfb-run -a npm test
+```
+
+참고: [Mesa llvmpipe](https://docs.mesa3d.org/drivers/llvmpipe.html), [Chromium SwANGLE](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/gpu/swiftshader.md).
+
+- CI는 3개 shard, runner당 1 worker로 전체 브라우저 테스트를 나눕니다. 테스트 삭제·skip·실패 무시로 초록 상태를 만들지 않습니다.
+- 파일 캡처는 `test.info().outputPath("이름.png")` 또는 `test-results/` 아래에 저장합니다. 개발자 PC의 `/private/tmp` 같은 절대 경로를 사용하지 않습니다.
+- 실패 시 DOM/네트워크/소스 trace와 실패 화면을 artifact에 보관합니다. WebGL 연속 화면 캡처는 CPU 렌더링의 readback 부하를 추가하므로 trace의 연속 스크린샷만 끕니다.
+- 설치/빌드 실패, assertion 실패, 테스트 timeout, job timeout, 결제/runner 미배정을 구분하고 로그의 실제 원인을 기록합니다. 로컬 통과만으로 원격 CI 통과를 주장하지 않습니다.
+- 수정 후 해당 PR의 최신 commit 검사를 확인합니다. 선행 브랜치에서 같은 오류가 발생하면 공통 수정만 반영하고 후속 기능을 앞선 PR에 섞지 않습니다.
