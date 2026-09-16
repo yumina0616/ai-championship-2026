@@ -34,7 +34,7 @@ jobs:
         working-directory: web
       - run: npm run build
         working-directory: web
-      - run: npx playwright install --w ith-deps chromium
+      - run: npx playwright install --with-deps chromium
         working-directory: web
       - run: sudo apt-get install -y xvfb libgl1-mesa-dri mesa-utils
       - run: xvfb-run -a glxinfo -B
