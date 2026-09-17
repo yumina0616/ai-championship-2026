@@ -1,11 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 
 async function enter(page: Page) {
+  await page.bringToFront();
   await page.goto("/");
   await page.getByRole("button", { name: "바로 운전하기" }).click();
   // 리소스 자체 timeout(8초)과 두 WebGL 탭의 소프트웨어 렌더 지연을 포함합니다.
   await expect(page.getByRole("button", { name: "D 기어" })).toBeEnabled({
-    timeout: 10_000,
+    timeout: 20_000,
   });
   await expect(page.locator(".mission-hud h1")).toBeFocused();
 }
@@ -444,6 +445,7 @@ test("감소된 모션 설정에서도 진입·카메라 전환 가능", async (
 });
 
 test("두 탭의 차량·기어 상태는 독립", async ({ page, context }) => {
+  test.setTimeout(60_000);
   await enter(page);
   await page.getByRole("button", { name: "R 기어" }).click();
   const second = await context.newPage();

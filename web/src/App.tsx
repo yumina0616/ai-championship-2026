@@ -196,6 +196,19 @@ export default function App() {
   const wheelDrag = useRef<{ id: number; x: number; value: number } | null>(
     null,
   );
+  useEffect(() => {
+    const releaseWheel = () => {
+      if (!wheelDrag.current) return;
+      wheelDrag.current = null;
+      driving.steer(null);
+    };
+    window.addEventListener("pointerup", releaseWheel);
+    window.addEventListener("pointercancel", releaseWheel);
+    return () => {
+      window.removeEventListener("pointerup", releaseWheel);
+      window.removeEventListener("pointercancel", releaseWheel);
+    };
+  }, [driving.steer]);
   const abort = useRef<AbortController | null>(null);
   const requestId = useRef(0);
   const modal = useRef<HTMLDialogElement>(null);

@@ -23,7 +23,9 @@ test("정적 배포 artifact에서 실제 가중치 추론·기록과 개발 API
   await expect(page.locator(".mission-hud")).toContainText("LEARNED LIVE");
   await expect(page.locator(".mission-hud")).toContainText("미스터팍");
   await expect
-    .poll(async () => Number(await page.getByTestId("speed").innerText()))
+    .poll(async () => Number(await page.getByTestId("speed").innerText()), {
+      timeout: 15_000,
+    })
     .toBeGreaterThan(0.1);
   await page.getByRole("button", { name: "연습 마치기", exact: true }).click();
   await page.getByRole("button", { name: "공간 바꾸기" }).click();
