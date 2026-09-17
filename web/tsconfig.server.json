@@ -4,5 +4,5 @@
     "types": ["node"],
     "typeRoots": ["./node_modules/@types"]
   },
-  "include": ["../server/*.ts", "./node_modules/vite/client.d.ts"]
+  "include": ["../server/*.ts", "../cloudflare/*.ts", "./node_modules/vite/client.d.ts"]
 }

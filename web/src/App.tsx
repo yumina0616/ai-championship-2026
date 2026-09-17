@@ -357,7 +357,11 @@ export default function App() {
     setCamera("follow");
     driving.reset();
     window.scrollTo({ top: 0, behavior: "instant" });
-    const timeout = window.setTimeout(() => controller.abort("timeout"), 8000);
+    // 공개 환경의 첫 AI 실행은 TF.js chunk 다운로드·초기화까지 포함한다.
+    const timeout = window.setTimeout(
+      () => controller.abort("timeout"),
+      mode === "mascot" ? 30000 : 8000,
+    );
     let loaded: LoadedPolicy | null = null;
     try {
       if (cinematicEntry) {
@@ -1045,6 +1049,7 @@ export default function App() {
                 않습니다.
                 <br />
                 현재 주행 데이터는 서버에 저장하거나 전송하지 않습니다.
+                {" "}<a href="/data-notice.html" target="_blank" rel="noreferrer">서비스·데이터 안내</a>
               </p>
               <span>
                 BUILT TO TRY AGAIN.
@@ -1194,7 +1199,9 @@ export default function App() {
                   <p role={state === "error" ? "alert" : "status"}>
                     {state === "error"
                       ? error
-                      : "실행 리소스를 확인하는 중입니다."}
+                      : mode === "mascot"
+                        ? "AI 모델을 준비하는 중이에요. 첫 실행은 최대 30초 걸릴 수 있어요."
+                        : "실행 리소스를 확인하는 중입니다."}
                   </p>
                   {state === "error" && (
                     <button className="button orange" onClick={start}>

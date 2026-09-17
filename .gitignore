@@ -28,3 +28,6 @@ test-results/
 playwright-report/
 .vite/
 server/.local-data/
+.wrangler/
+.dev.vars
+.dev.vars.*
