@@ -1,5 +1,7 @@
 // #11: train.json(+validation.json)으로 작은 MLP를 행동복제 학습시키고 모델을 저장한다.
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as tf from "@tensorflow/tfjs";
 import { createRng } from "../../engine/src/index.js";
@@ -7,8 +9,8 @@ import { buildModel } from "./model.js";
 import { saveModelToDisk } from "./modelIO.js";
 
 const HERE = fileURLToPath(new URL(".", import.meta.url));
-const DATA_DIR = `${HERE}../data`;
-const MODEL_DIR = `${HERE}../model`;
+const DATA_DIR = process.argv[2] ? resolve(process.argv[2]) : `${HERE}../data`;
+const MODEL_DIR = process.argv[3] ? resolve(process.argv[3]) : `${HERE}../model`;
 const SEED = 42; // buildModel의 가중치 초기화 + 아래 셔플 둘 다 여기서만 정한다.
 
 interface Sample {
@@ -35,6 +37,15 @@ export function seededShuffle<T>(items: T[], seed: number): T[] {
 }
 
 async function main() {
+  if (process.argv[2] && (!process.argv[3] || existsSync(MODEL_DIR))) throw Error("참여 데이터는 존재하지 않는 별도 후보 모델 폴더에 저장하세요.");
+  const manifestPath = `${DATA_DIR}/community-manifest.json`;
+  const communityManifest = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : null;
+  if (communityManifest) {
+    if (!Number.isFinite(Date.parse(communityManifest.createdAt)) || Date.now() - Date.parse(communityManifest.createdAt) > 86400000) throw Error("삭제 반영을 위해 export/prepare를 새로 실행하세요.");
+    for (const name of ["train.json", "validation.json", "heldout-scenarios.json"]) {
+      if (createHash("sha256").update(readFileSync(`${DATA_DIR}/${name}`)).digest("hex") !== communityManifest.files[name]) throw Error("dataset_checksum_mismatch");
+    }
+  }
   const trainSamplesRaw: Sample[] = JSON.parse(readFileSync(`${DATA_DIR}/train.json`, "utf8"));
   const validationSamples: Sample[] = JSON.parse(readFileSync(`${DATA_DIR}/validation.json`, "utf8"));
 
@@ -82,6 +93,7 @@ async function main() {
     JSON.stringify(
       {
         seed: SEED,
+        communityDataset: communityManifest,
         seedAppliedTo: ["buildModel() kernelInitializer(glorotUniform)", "train.json 사전 셔플"],
         epochs: 200,
         batchSize: 32,

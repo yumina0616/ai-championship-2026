@@ -1,6 +1,7 @@
 // 화면 선택지와 배포 리소스 확인. 실제 차량/센서 계산은 driving.ts → engine/이 담당합니다.
 export type Mode = "human" | "mascot";
-export type TemplateId = "open" | "neighbors" | "pillar";
+import type { TemplateId } from "./scenario";
+export type { TemplateId } from "./scenario";
 export type PreviewState = "idle" | "loading" | "ready" | "error" | "finished";
 
 export const templates: {

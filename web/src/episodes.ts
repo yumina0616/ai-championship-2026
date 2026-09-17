@@ -8,7 +8,7 @@ import {
   type Scenario,
   type StepResult,
 } from "../../engine/src/index";
-import { makeScenario } from "./driving";
+import { makeScenario } from "./scenario";
 import { mapScenario, parseMap } from "./maps";
 import type { DriverInput, Gear } from "./driver-controls";
 import { POLICY_VERSION } from "./policy-info";

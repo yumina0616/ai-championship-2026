@@ -1,5 +1,7 @@
 # training — 초기 주차 정책 학습 (Issue #11)
 
+참여 데이터 후속 #17: [수집·오프라인 학습 인수인계](../docs/collection.md). `npm run community -- export/prepare/compare`와 `npm run train -- <dataset> <새 후보 폴더>`를 추가했다. 실제 사용자 데이터 학습/공개 모델 교체는 아직 실행하지 않았으며 기존 결과를 개선 결과로 바꾸지 않는다.
+
 `engine/`이 만든 Hybrid A* rollout으로 작은 행동복제(behavior cloning) MLP를 학습하고, 학습에 안 쓴(heldout) scenario에서 평가한다. `engine/`을 소스 상대경로로 직접 import한다(별도 npm 패키지로 배포하는 게 아니라 같은 monorepo 안의 형제 폴더).
 
 ## 실행 순서

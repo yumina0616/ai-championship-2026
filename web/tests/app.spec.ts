@@ -244,9 +244,9 @@ test("랜딩·차고 선택·키보드·모델 준비 상태·가이드", async 
   await expect(
     page.getByRole("radio", { name: "옆 차 사이로 쏙" }),
   ).toBeChecked();
-  await page.getByRole("radio", { name: /마스코트/ }).check();
+  await page.getByRole("radio", { name: /미스터팍/ }).check();
   await expect(
-    page.getByRole("button", { name: "마스코트 운전 보기" }),
+    page.getByRole("button", { name: "미스터팍 운전 보기" }),
   ).toBeEnabled();
   await expect(page.getByRole("status")).toContainText("0/1");
   await page.getByRole("button", { name: "조작 가이드" }).click();

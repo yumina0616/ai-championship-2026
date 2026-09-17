@@ -4,7 +4,7 @@ import worker, { type Env } from "./worker";
 
 const makeEnv = (): Env => ({
   ASSETS: { fetch: async () => new Response("static") },
-  RECORDS: { get: async (key) => {
+  RECORDS: { put: async () => ({}), delete: async () => {}, list: async () => ({ objects: [], truncated: false }), get: async (key) => {
     assert.equal(key, "operations/storage-check.json");
     return { text: async () => '{"kind":"synthetic-storage-check","version":1}\n' };
   } },
@@ -18,7 +18,7 @@ test("정적 웹은 전달하고 고정 합성 파일로 R2 연결 확인", asyn
 });
 test("R2 장애/누락 시 성공으로 표시하지 않고 내부 오류는 노출하지 않음", async () => {
   for (const get of [async () => null, async () => { throw Error("private-details"); }]) {
-    const r = await worker.fetch(request("/api/health"), { ...makeEnv(), RECORDS: { get } });
+    const r = await worker.fetch(request("/api/health"), { ...makeEnv(), RECORDS: { ...makeEnv().RECORDS, get } });
     assert.equal(r.status, 503);
     assert.equal((await r.text()).includes("private-details"), false);
   }

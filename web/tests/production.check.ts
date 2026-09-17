@@ -14,12 +14,14 @@ test("정적 배포 artifact에서 실제 가중치 추론·기록과 개발 API
     if (r.method() === "POST") uploads.push(r.url());
   });
   await page.goto("/#garage");
+  await expect(page).toHaveTitle("Mr.Park 미스터팍 — 나만의 주차 연습 공간");
   await expect(
     page.getByText("개발 전용 기여 테스트", { exact: false }),
   ).toHaveCount(0);
-  await page.getByRole("radio", { name: /마스코트/ }).check();
-  await page.getByRole("button", { name: "마스코트 운전 보기" }).click();
+  await page.getByRole("radio", { name: /미스터팍/ }).check();
+  await page.getByRole("button", { name: "미스터팍 운전 보기" }).click();
   await expect(page.locator(".mission-hud")).toContainText("LEARNED LIVE");
+  await expect(page.locator(".mission-hud")).toContainText("미스터팍");
   await expect
     .poll(async () => Number(await page.getByTestId("speed").innerText()))
     .toBeGreaterThan(0.1);

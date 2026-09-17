@@ -49,13 +49,17 @@ import { mapScenario, type ParkingMap } from "./maps";
 import { POLICY_LABEL, type LoadedPolicy } from "./policy-info";
 const ParkingScene = lazy(() => import("./ParkingScene"));
 
+import { CollectionSettings, useCollection } from "./collection";
+
 function Logo() {
   return (
     <span className="wordmark">
       <span className="logo-mark">
         <Route size={22} />
       </span>
-      parkside<span className="wordmark-period">.</span>
+      <span>
+        Mr<span className="wordmark-period">.</span>Park
+      </span>
     </span>
   );
 }
@@ -172,7 +176,8 @@ export default function App() {
     () => (customMap ? mapScenario(customMap) : undefined),
     [customMap],
   );
-  const driving = useDriving(template, customScenario, recordLocally);
+  const collection = useCollection();
+  const driving = useDriving(template, customScenario, recordLocally, collection.enabled ? collection.upload : undefined);
   driving.context.current = {
     viewMode: camera,
     assistanceFlags:
@@ -529,7 +534,7 @@ export default function App() {
       </div>
       {!introDismissed && (
         <div className="opening-signature" aria-hidden="true">
-          <span>PARKSIDE</span>
+          <span>Mr.Park</span>
           <small>A PHYSICAL AI EXPERIMENT</small>
         </div>
       )}
@@ -554,7 +559,7 @@ export default function App() {
       {view === "landing" ? (
         <>
           <header className="site-header">
-            <a href="#" aria-label="PARKSIDE 홈">
+            <a href="#" aria-label="Mr.Park 미스터팍 홈">
               <Logo />
             </a>
             <nav aria-label="메인 메뉴">
@@ -912,7 +917,7 @@ export default function App() {
                       checked={mode === "mascot"}
                       onChange={() => setMode("mascot")}
                     />
-                    마스코트 <small>실험 모델</small>
+                    미스터팍 <small>AI 실험 모델</small>
                   </label>
                 </fieldset>
                 <button
@@ -921,7 +926,7 @@ export default function App() {
                   disabled={state === "loading"}
                   onClick={start}
                 >
-                  {mode === "human" ? "이 공간에서 시작" : "마스코트 운전 보기"}
+                  {mode === "human" ? "이 공간에서 시작" : "미스터팍 운전 보기"}
                   <ArrowRight size={19} />
                 </button>
               </div>
@@ -929,7 +934,7 @@ export default function App() {
                 {recordLocally
                   ? "주행은 이 브라우저에 최근 5회만 보관해요."
                   : "다음 주행은 기록하지 않아요. 기존 기록은 유지돼요."}{" "}
-                서버 전송·학습 기여는 하지 않아요.
+                서버 전송은 아래 학습용 전송 설정을 켠 경우에만 해요.
               </p>
               <label className="local-record-choice">
                 그래픽 품질
@@ -977,10 +982,7 @@ export default function App() {
                 이 브라우저에 주행 기록 보관
               </label>
               {preferenceError && <p role="status">{preferenceError}</p>}
-              <p className="availability">
-                학습 기여: 제공하지 않음 · 켜거나 동의하지 않아도 모든 개인
-                연습을 사용할 수 있어요.
-              </p>
+              <CollectionSettings collection={collection} />
               <EpisodeLibrary
                 onForget={driving.forgetEpisode}
                 latest={driving.lastEpisode}
@@ -1005,7 +1007,7 @@ export default function App() {
                   로봇의 새로운 시선으로.
                 </h2>
                 <p>
-                  내가 직접 운전하고, AI 친구도 같은 공간에 도전하고.
+                  내가 직접 운전하고, 미스터팍도 같은 공간에 도전하고.
                   <br />
                   우리는 성공뿐 아니라 실패에서도 배울 수 있는 주차장을
                   만들어요.
@@ -1048,7 +1050,7 @@ export default function App() {
                 가상 환경의 실험입니다. 실제 차량 제어·운전 교육을 대신하지
                 않습니다.
                 <br />
-                현재 주행 데이터는 서버에 저장하거나 전송하지 않습니다.
+                동의하지 않은 주행 데이터는 서버에 저장하거나 전송하지 않습니다.
                 {" "}<a href="/data-notice.html" target="_blank" rel="noreferrer">서비스·데이터 안내</a>
               </p>
               <span>
@@ -1104,7 +1106,7 @@ export default function App() {
               <p>
                 <Flag size={13} />{" "}
                 {mode === "mascot"
-                  ? "LEARNED LIVE · 센서 관측으로 실제 추론 중"
+                  ? "미스터팍 · LEARNED LIVE · 센서 관측으로 실제 추론 중"
                   : "표시된 칸에 정차한 뒤 P로 마무리"}
               </p>
               {mode === "mascot" && (
@@ -1332,7 +1334,7 @@ export default function App() {
                     {recordLocally
                       ? "차고의 내 주행 기록에서 저장 상태를 재생할 수 있어요."
                       : "로컬 기록을 꺼서 이번 주행은 보관하지 않았어요."}{" "}
-                    같은 공간의 사람·마스코트 기록을 골라 비교할 수도 있어요.
+                    같은 공간의 나와 미스터팍 기록을 골라 비교할 수도 있어요.
                   </small>
                   {driving.storageError && (
                     <p role="alert">{driving.storageError}</p>
@@ -1615,19 +1617,19 @@ export default function App() {
           ) : (
             <>
               <p>
-                내가 운전한 공간에서 AI 친구도 운전해보면 어떨까요? 서로 다른
-                시도와 실패를 관찰할 수 있는 참여형 주차 실험실을 만들고 있어요.
+                내가 운전한 공간에서 AI 친구 미스터팍도 운전해보면 어떨까요?
+                서로 다른 시도와 실패를 관찰할 수 있는 참여형 주차 실험실을 만들고 있어요.
               </p>
               <p>
                 직접 운전·거리 센서·맵 편집·로컬 기록 재생과 비교를 제공해요.
-                마스코트는 실제 학습 모델로 운전하지만 초기 모델이라 실패할 수
-                있어요. 실제 사용자 기록 기여는 아직 켜지 않았어요. 참여 수가
+                미스터팍은 실제 학습 모델로 운전하지만 초기 모델이라 실패할 수
+                있어요. 학습용 전송을 선택한 뒤 시작한 완료 기록만 수집해요. 참여 수가
                 늘었다고 모델 성능이 자동으로 좋아졌다고 표현하지 않습니다.
               </p>
               <p className="dialog-note">
-                PARKSIDE는 임시 이름입니다. 주행 데이터는 서버에 전송하지
-                않습니다. 실제 운전 교육 효과와 실차 안전성은 검증하지
-                않았습니다.
+                Mr.Park(미스터팍)은 직접 운전하고 AI의 도전도 관찰하는 가상
+                주차 실험실이에요. 동의하지 않은 주행은 서버에 전송하지 않습니다.
+                실제 운전 교육 효과와 실차 안전성은 검증하지 않았습니다.
               </p>
               <a
                 className="text-link"

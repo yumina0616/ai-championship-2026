@@ -151,6 +151,20 @@ a {
     monospace;
   letter-spacing: 1.2px;
 }
+.collection-settings {
+  margin: 24px 0;
+  padding: 22px;
+  border: 1px solid #3b454a;
+  border-radius: 8px;
+  background: #141b1f;
+  color: #ccd3d5;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.collection-settings h3 { color: #f4f5f3; margin-top: 0; }
+.collection-settings label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.collection-settings a { color: inherit; text-decoration: underline; }
+.collection-settings button { text-align: left; white-space: normal; }
 .wordmark {
   display: inline-flex;
   align-items: center;
@@ -162,7 +176,6 @@ a {
 }
 .wordmark-period {
   color: var(--orange);
-  margin-left: -6px;
 }
 .logo-mark {
   display: grid;

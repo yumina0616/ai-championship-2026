@@ -68,7 +68,7 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     // 대기만 줄인다. 실제 시작 위치·판정·시뮬레이션 시간은 엔진을 사용한다.
-    await page.route(/\/src\/driving\.ts(?:\?.*)?$/, async (route) => {
+    await page.route(/\/src\/scenario\.ts(?:\?.*)?$/, async (route) => {
       const response = await route.fetch();
       const body = await response.text();
       expect(body).toContain("timeoutSimS: 90");
@@ -112,7 +112,7 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     // 테스트에서만 시작점을 주차칸 안 44cm 오프셋으로 둔다. 엔진/결과/타이머는 대역으로 바꾸지 않는다.
-    await page.route(/\/src\/driving\.ts(?:\?.*)?$/, async (route) => {
+    await page.route(/\/src\/scenario\.ts(?:\?.*)?$/, async (route) => {
       const response = await route.fetch();
       const body = await response.text();
       const original = "start: { xM: 0.2, yM: -3.7, yawRad: 0 }";

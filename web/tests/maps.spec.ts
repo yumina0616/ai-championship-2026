@@ -73,7 +73,7 @@ test("편집기 숫자 조정·삭제·파일 복원과 모바일 경계", async
     .getByRole("button", { name: "맵 파일 내보내기", exact: true })
     .click();
   await page.getByRole("button", { name: "확인 후 맵 다운로드" }).click();
-  expect((await download).suggestedFilename()).toBe("parkside-map.json");
+  expect((await download).suggestedFilename()).toBe("mr-park-map.json");
   await page.getByRole("button", { name: "맵 적용", exact: true }).click();
   await expect(
     page.getByText("맵을 적용했어요.", { exact: true }),
