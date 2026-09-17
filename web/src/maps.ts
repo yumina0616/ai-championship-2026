@@ -6,8 +6,8 @@ import {
   type RectObstacle,
 } from "../../engine/src/index";
 import { rectFullyInside } from "../../engine/src/collision";
-import { makeScenario } from "./driving";
-import type { TemplateId } from "./preview";
+import { makeScenario } from "./scenario";
+import type { TemplateId } from "./scenario";
 
 export interface ParkingMap {
   version: "parkside-map.v1";

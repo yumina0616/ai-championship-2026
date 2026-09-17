@@ -96,7 +96,7 @@ export default function MapShare({
           onClick={() => {
             downloadJson(
               parseMap(JSON.stringify({ ...map, name })),
-              "parkside-map.json",
+              "mr-park-map.json",
             );
             onClose();
           }}

@@ -36,9 +36,9 @@ test("링크를 확인한 뒤 적용하고 사람·마스코트에 같은 맵을
   await expect(
     page.getByText("적용한 맵: 공유 주차장", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("radio", { name: /마스코트/ }).check();
+  await page.getByRole("radio", { name: /미스터팍/ }).check();
   await expect(
-    page.getByRole("button", { name: "마스코트 운전 보기" }),
+    page.getByRole("button", { name: "미스터팍 운전 보기" }),
   ).toBeEnabled();
   expect(writes).toEqual([]);
 });

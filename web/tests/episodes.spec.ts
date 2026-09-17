@@ -214,5 +214,5 @@ test("저장소 거부 시에도 메모리 기록 내보내기가 가능", async
   await page
     .getByRole("button", { name: "기록 내보내기", exact: true })
     .click();
-  expect((await download).suggestedFilename()).toContain("parkside-episode");
+  expect((await download).suggestedFilename()).toContain("mr-park-episode");
 });

@@ -8,6 +8,7 @@
     "generate-dataset": "tsx src/generateDataset.ts",
     "train": "tsx src/train.ts",
     "evaluate": "tsx src/evaluate.ts",
+    "community": "tsx src/community.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

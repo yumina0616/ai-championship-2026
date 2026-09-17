@@ -1,11 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 
 async function enter(page: Page) {
+  await page.bringToFront();
   await page.goto("/");
   await page.getByRole("button", { name: "바로 운전하기" }).click();
   // 리소스 자체 timeout(8초)과 두 WebGL 탭의 소프트웨어 렌더 지연을 포함합니다.
   await expect(page.getByRole("button", { name: "D 기어" })).toBeEnabled({
-    timeout: 10_000,
+    timeout: 20_000,
   });
   await expect(page.locator(".mission-hud h1")).toBeFocused();
 }
@@ -244,9 +245,9 @@ test("랜딩·차고 선택·키보드·모델 준비 상태·가이드", async 
   await expect(
     page.getByRole("radio", { name: "옆 차 사이로 쏙" }),
   ).toBeChecked();
-  await page.getByRole("radio", { name: /마스코트/ }).check();
+  await page.getByRole("radio", { name: /미스터팍/ }).check();
   await expect(
-    page.getByRole("button", { name: "마스코트 운전 보기" }),
+    page.getByRole("button", { name: "미스터팍 운전 보기" }),
   ).toBeEnabled();
   await expect(page.getByRole("status")).toContainText("0/1");
   await page.getByRole("button", { name: "조작 가이드" }).click();
@@ -444,6 +445,7 @@ test("감소된 모션 설정에서도 진입·카메라 전환 가능", async (
 });
 
 test("두 탭의 차량·기어 상태는 독립", async ({ page, context }) => {
+  test.setTimeout(60_000);
   await enter(page);
   await page.getByRole("button", { name: "R 기어" }).click();
   const second = await context.newPage();

@@ -96,3 +96,5 @@ jobs:
         working-directory: web
       - run: npm run test:local-api
         working-directory: web
+      - run: npm run test:cloudflare
+        working-directory: web

@@ -171,7 +171,7 @@ export default function EpisodeLibrary({
                 onClick={() =>
                   downloadJson(
                     e,
-                    `parkside-episode-${e.header.episodeId}.json`,
+                    `mr-park-episode-${e.header.episodeId}.json`,
                     true,
                   )
                 }
@@ -326,7 +326,7 @@ export default function EpisodeLibrary({
               onClick={() =>
                 downloadJson(
                   selected,
-                  `parkside-episode-${selected.header.episodeId}.json`,
+                  `mr-park-episode-${selected.header.episodeId}.json`,
                   true,
                 )
               }

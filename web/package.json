@@ -15,7 +15,7 @@
     "test:production": "npm run build && playwright test -c playwright.production.config.ts",
     "build:local-api": "tsc -p tsconfig.server.json && esbuild ../server/main.ts ../server/api.test.ts --bundle --platform=node --format=esm --outdir=../server/dist --out-extension:.js=.mjs",
     "test:local-api": "npm run build:local-api && node --test ../server/dist/api.test.mjs",
-    "test:cloudflare": "tsc -p tsconfig.server.json && esbuild ../cloudflare/worker.test.ts --bundle --platform=node --format=esm --outfile=../cloudflare/dist/worker.test.mjs && node --test ../cloudflare/dist/worker.test.mjs",
+    "test:cloudflare": "tsc -p tsconfig.server.json && esbuild ../cloudflare/worker.test.ts ../cloudflare/collection.test.ts --bundle --platform=node --format=esm --outdir=../cloudflare/dist --out-extension:.js=.mjs && node --test ../cloudflare/dist/*.test.mjs",
     "dev:local-api": "npm run build:local-api && node ../server/dist/main.mjs"
   },
   "dependencies": {
