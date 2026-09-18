@@ -24,6 +24,8 @@
 
 요청 command는 사람이 키를 누른 것과 다릅니다. 키/페달은 rawInput, 수동 어댑터 출력은 requestedActionT, 엔진 clamp 후 값은 appliedCommandT입니다. 시점이나 truth 기반 안내를 사용한 기록을 곧바로 센서 전용 정책 학습 데이터로 삼지 않습니다.
 
+시점은 `orbit`, `follow`, `top`, `rear`, `driver`를 허용합니다. 보조 화면의 도움 플래그는 `rear-camera`(후방 카메라), `rear-mirror`(좌우 반전 미러)입니다. 새 값도 각 step에 기록하며 기존 파일은 그대로 읽습니다. 오래된 엄격한 parser는 새 값을 거부할 수 있으므로 웹·수집 Worker·학습 전처리의 공유 parser를 함께 배포해야 합니다. 오프닝/탑승 연출과 기술 설명 뷰는 사용자 Episode에 저장하지 않습니다.
+
 파일은 compact JSON, 최대 16 MiB, 1,801 step, 36 ray입니다. 결측 센서는 valid=false/rangeM=null로 직렬화하고 읽을 때 NaN으로 복원합니다. 미검출(valid=true/max range)과 다릅니다. 파일을 여는 것은 자동 보관·서버 업로드가 아닙니다.
 
 검사: 지원 버전·고정 구성, 유한 수치·범위·배열 상한, 연속 step/time, 관측 앞뒤 정렬, 종료 후 추가 step 금지, 마지막 outcome/footer 일치, footer 재계산. 신뢰할 수 없는 파일을 코드로 실행하지 않습니다. **형식·내부 일관성 검증이지 암호학적 진위 증명이나 모든 물리 step 재실행 검증은 아닙니다.** 학습 반영 전 별도 오프라인 검증이 필요합니다.

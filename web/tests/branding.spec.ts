@@ -15,9 +15,8 @@ for (const width of [1440, 390]) {
     );
     await page.screenshot({ path: test.info().outputPath("brand-landing.png") });
 
-    await page.getByRole("radio", { name: /미스터팍 AI 실험 모델/ }).check();
     await expect(
-      page.getByRole("button", { name: "미스터팍 운전 보기" }),
+      page.getByRole("button", { name: "미스터팍에게 맡기기" }),
     ).toBeVisible();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import { vehicleFootprint, type OrientedRect } from "../../engine/src/index";
 import {
   MAP_BYTES,
@@ -12,6 +12,7 @@ import {
 import type { TemplateId } from "./preview";
 import "./workbench.css";
 import MapShare from "./MapShare";
+const MapStudio = lazy(() => import("./MapStudio"));
 
 export default function MapEditor({
   template,
@@ -28,6 +29,7 @@ export default function MapEditor({
   const [selected, select] = useState("start");
   const [notice, setNotice] = useState("");
   const [sharing, setSharing] = useState<ParkingMap | null>(null);
+  const [opened, setOpened] = useState(false);
   const drag = useRef<{
     id: number;
     x: number;
@@ -53,11 +55,13 @@ export default function MapEditor({
     })),
   ];
   const current = items.find((o) => o.id === selected) ?? items[0];
-  function update(change: Partial<OrientedRect>) {
-    const r = { ...current, ...change };
+  function update(change: Partial<OrientedRect>, id = current.id) {
+    const item = items.find(o => o.id === id);
+    if (!item) return;
+    const r = { ...item, ...change };
     setNotice("");
     setMap((m) =>
-      current.id === "start"
+      item.id === "start"
         ? {
             ...m,
             start: {
@@ -66,12 +70,12 @@ export default function MapEditor({
               yawRad: r.yawRad,
             },
           }
-        : current.id === "goal"
+        : item.id === "goal"
           ? { ...m, goal: r }
           : {
               ...m,
               obstacles: m.obstacles.map((o) =>
-                o.id === current.id ? { ...o, ...change } : o,
+                o.id === item.id ? { ...o, ...change } : o,
               ),
             },
     );
@@ -98,13 +102,15 @@ export default function MapEditor({
   return (
     <details
       className="workbench"
-      onToggle={() => {
+      onToggle={(e) => {
         drag.current = null;
+        setOpened(e.currentTarget.open);
       }}
     >
       <summary>
         나만의 주차장 만들기 <span>MAP STUDIO / 미터 단위</span>
       </summary>
+      {!opened && <span className="studio-invitation">YOUR SPACE. YOUR RULES. ↗</span>}
       <p>
         탑뷰에서 물체를 끌거나 아래 숫자를 바꾸세요. 16.4 × 10.4 m · 차량 4.4 ×
         1.8 m · 장애물 최대 24개. 유효한 배치라도 주차 가능성을 보장하지 않아요.
@@ -118,6 +124,12 @@ export default function MapEditor({
         />
       </label>
       <div className="editor-layout">
+        <div className="editor-views">
+        {opened && <Suspense fallback={<p>입체 작업대를 준비하고 있어요…</p>}>
+          <MapStudio items={items} selected={selected} onSelect={select}
+            onMove={(id, x, y) => update({ centerXM: x, centerYM: y }, id)} />
+        </Suspense>}
+        <div className="plan-view-heading"><span>정밀 평면 편집</span><small>0.1 M SNAP / TOP VIEW</small></div>
         <svg
           className="map-canvas"
           viewBox="-8.5 -4.65 17 11"
@@ -216,6 +228,7 @@ export default function MapEditor({
             </g>
           ))}
         </svg>
+        </div>
         <div className="editor-inspector">
           <label>
             선택한 물체{" "}

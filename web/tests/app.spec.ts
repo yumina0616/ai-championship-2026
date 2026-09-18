@@ -208,7 +208,7 @@ test("센서 경고음은 동의한 재생 중에만 예약되고 일시정지·
   expect((await stats()).active).toBe(0);
   await page.getByRole("button", { name: "차고", exact: true }).click();
   expect((await stats()).closed).toBe(1);
-  await page.getByRole("button", { name: "이 공간에서 시작" }).click();
+  await page.getByRole("button", { name: "직접 운전하기" }).click();
   await expect(page.locator(".mission-hud h1")).toBeFocused();
   await page.getByRole("button", { name: "센서 경고음" }).click();
   await page.getByRole("button", { name: "센서 경고음" }).click();
@@ -239,23 +239,23 @@ test("랜딩·차고 선택·키보드·모델 준비 상태·가이드", async 
   await expect(
     page.getByRole("heading", { name: "주차를 플레이하다." }),
   ).toBeVisible();
-  await expect(page.locator("canvas")).toBeVisible();
+  await expect(page.locator(".world-stage canvas")).toBeVisible();
   await page.getByRole("radio", { name: "여유로운 첫 주차" }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(
     page.getByRole("radio", { name: "옆 차 사이로 쏙" }),
   ).toBeChecked();
-  await page.getByRole("radio", { name: /미스터팍/ }).check();
   await expect(
-    page.getByRole("button", { name: "미스터팍 운전 보기" }),
+    page.getByRole("button", { name: "미스터팍에게 맡기기" }),
   ).toBeEnabled();
-  await expect(page.getByRole("status")).toContainText("0/1");
+  await page.getByText("화면 설정 · AI 모델 정보", { exact: true }).click();
+  await expect(page.locator(".garage-settings").first()).toContainText("0/1");
   await page.getByRole("button", { name: "조작 가이드" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(page.getByRole("button", { name: "조작 가이드" })).toBeFocused();
-  await page.getByRole("radio", { name: "직접 운전", exact: true }).check();
+  await expect(page.getByRole("button", { name: "직접 운전하기", exact: true })).toBeEnabled();
   await page.getByRole("radio", { name: "여유로운 첫 주차" }).check();
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(1000);
@@ -338,7 +338,7 @@ test("창 이탈·Space 일시정지·결과·재시작 입력 초기화", async
   expect(await page.getByTestId("speed").innerText()).toBe("0.0");
   await page.getByRole("button", { name: "차고", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "이 공간에서 시작" }),
+    page.getByRole("button", { name: "직접 운전하기" }),
   ).toBeFocused();
 });
 
@@ -363,7 +363,7 @@ test("초기 리소스 실패·재시도·늦은 응답 취소", async ({ page }
       .fulfill({ json: { kind: "browser-engine", version: 1 } })
       .catch(() => {});
   });
-  await page.getByRole("button", { name: "이 공간에서 시작" }).click();
+  await page.getByRole("button", { name: "직접 운전하기" }).click();
   await page.getByRole("button", { name: "불러오기 취소" }).click();
   releaseResponse();
   await page.waitForTimeout(650);
@@ -405,7 +405,7 @@ test("모바일 터치·조작과 차량 동시 노출·가로 넘침 없음", a
     ),
   ).toBe(true);
   await page.getByRole("radio", { name: "기둥 옆 한 자리" }).check();
-  await page.getByRole("button", { name: "이 공간에서 시작" }).click();
+  await page.getByRole("button", { name: "직접 운전하기" }).click();
   await page.getByRole("button", { name: "D 기어" }).click();
   const throttle = page.getByRole("button", { name: "액셀", exact: true });
   const box = await throttle.boundingBox();

@@ -1,6 +1,10 @@
 # Mr.Park Cloudflare 공개 배포
 
-2026-09-17, #13/#15. 공개 주소: https://parkside-parking.jinhyeong9568-663.workers.dev
+2026-09-19, #13/#15. 사용자 도메인: https://mrpark.ai.kr
+
+기존 주소 https://parkside-parking.jinhyeong9568-663.workers.dev 도 유지합니다. 가비아 도메인의 네임서버는 `opal.ns.cloudflare.com`, `rudy.ns.cloudflare.com`이며 Cloudflare Free zone과 기존 `parkside-parking` Worker의 Custom Domain을 사용합니다. DNS 전파와 HTTPS 인증서 활성화는 별도 확인 대상입니다. `wrangler.jsonc`에 도메인을 고정해 재배포 때 대시보드 설정이 유실되지 않도록 합니다. 등록기관 이전·별도 호스팅 구매·R2 공개 설정은 필요하지 않습니다.
+
+새 도메인은 기존 `workers.dev`와 다른 브라우저 출처입니다. 로컬 기록·전송 동의·삭제 영수증은 자동으로 이전되지 않습니다. 기존 서버 기록의 삭제는 원래 접속한 주소의 기록 설정에서 수행하고, 새 주소에서는 기록 방식을 다시 선택합니다. 임의로 기록을 복사하거나 동의를 승계하지 않습니다.
 
 ## 서비스명과 기존 식별자
 

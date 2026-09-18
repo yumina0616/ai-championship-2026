@@ -1,0 +1,172 @@
+/* MR.PARK / moving space — 하나의 필름, 선명한 글, 충분한 여백. */
+.cinema :is(h1,h2,h3,.logo,.mascot-wordmark,.section-index > span) {
+  font-family: var(--font-brand);
+  font-feature-settings: "ss01";
+}
+.cinema .hero h1,.cinema .intro-shot-copy strong,.cinema .end-drive .end-watermark,.cinema .loader-instrument > span {
+  font-family: var(--font-brand);
+}
+.cinema :is(h1,h2,h3) { word-break: keep-all; text-wrap: balance; }
+.cinema h2 { font-weight: 570; }
+.cinema :is(p,button,a,summary,label) { word-break: keep-all; }
+.cinema p { letter-spacing: -.012em; text-wrap: pretty; }
+.cinema :is(.section-heading h2,.design-manifesto h2,.experiment-copy h2,.lab-copy h2,.end-drive h2) {
+  letter-spacing: -.042em; line-height: 1.18;
+}
+.cinema :is(.section-heading p,.experiment-copy > p,.manifesto-detail p,.lab-description p) {
+  font-weight: 450; line-height: 1.85; color: #d7e0e7;
+}
+.cinema :is(.driver-card strong,.mission h3,.launch-heading h3) { font-weight: 600; letter-spacing: -.03em; }
+.cinema :is(.eyebrow,.section-index small,.driver-card small) { letter-spacing: .14em; }
+.cinema :is(.speed-value,.compact-speed,.compact-gear,.parking-check) { font-variant-numeric: tabular-nums; }
+.cinema .section-index > span { font-weight: 350; letter-spacing: -.06em; }
+.cinema .mission-hint { letter-spacing: .06em; }
+
+/* 페이지는 하나의 바탕. 섹션 구분선만 남기고 배경을 끊지 않는다. */
+.cinema.landing { background: #101820; }
+.cinema .continuous-backdrop {
+  position: fixed; inset: 0; width: 100%; height: 100dvh; z-index: 0;
+  pointer-events: none; overflow: hidden; background: #101820;
+}
+.continuous-backdrop :is(img,video) {
+  position: absolute; inset: -1%; width: 102%; height: 102%; object-fit: cover; object-position: 60% center;
+  filter: saturate(.5) brightness(.72); transform: translate3d(var(--film-focus-x,0px),var(--film-focus-y,0px),0);
+  transition: transform .8s cubic-bezier(.22,1,.36,1);
+}
+.continuous-backdrop video { opacity: 0; }
+.continuous-backdrop[data-ready=true] video { opacity: 1; }
+.continuous-backdrop[data-ready=true] img { opacity: 0; }
+.cinema .film-scrim {
+  position: absolute; inset: 0; z-index: 2;
+  /* 글 덩어리를 감싸지 않는다. 페이지 전체에 같은 수평 명암을 유지한다. */
+  background: linear-gradient(90deg,
+    #09121af0 0%,#09121ae8 16%,#09121ada 32%,
+    #09121abb 50%,#09121a99 68%,#09121a85 84%,#09121a80 100%);
+}
+.cinema.landing main { position: relative; z-index: 1; }
+.cinema :is(.design-manifesto,.garage-section,.experiment-section,.sensor-lab,.end-drive,.site-footer,.signal-ribbon,.story-static) {
+  background: transparent; box-shadow: none;
+}
+.cinema :is(.design-manifesto,.garage-section,.experiment-section,.sensor-lab)::after {
+  background: #c3d2dc24;
+}
+.cinema .site-footer { position: relative; z-index: 1; }
+.cinema .motion-preference { min-height: 44px; cursor: pointer; gap: 12px; }
+.cinema .motion-preference input { width: 18px; height: 18px; accent-color: #d5e2e8; }
+.cinema .motion-preference input:focus-visible { outline: 2px solid #bde6ff; outline-offset: 4px; }
+/* 글 뒤의 둥근 매트/박스 없이, 하나의 화면 음영 위에 타이포를 놓는다. */
+.cinema :is(.section-heading h2,.design-manifesto h2,.experiment-copy h2,.lab-copy h2,.end-drive h2) {
+  color: #f5f8fa; text-shadow: 0 1px 2px #02070b66;
+}
+.cinema :is(.experiment-copy > .mascot-scope,.section-index small,.manifesto-detail p,.lab-description p) { color: #c4d1dc; }
+.cinema :is(.section-heading p,.experiment-copy > p,.manifesto-detail p,.lab-description p) { text-shadow: 0 1px 2px #02070b66; }
+/* 자동차의 스모크 글라스 + 솔리드 실버. 주요 행동은 투명하게 만들지 않는다. */
+.cinema .button {
+  font-weight: 550; letter-spacing: -.02em; min-height: 48px; border-radius: 14px;
+  transition: background .18s, border-color .18s, box-shadow .18s, scale .14s;
+}
+.cinema .hero-actions .button { border-radius: 16px; padding: 19px 25px; }
+.cinema .button.orange {
+  color: #17222b; border: 1px solid #f4f7f8;
+  background: linear-gradient(155deg,#f5f6f4,#dce4e8);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 #b6c1c8, 0 6px 18px #02070c30;
+}
+.cinema .button.orange::before { display: none; }
+.cinema .button.orange > svg {
+  box-sizing: content-box; padding: 6px; margin: -5px -7px -5px 8px;
+  border: 1px solid #364d5b20; border-radius: 50%; background: #ffffff42;
+}
+.cinema :is(.button.secondary,.mascot-actions button,.motion-toggle,.record-settings-link) {
+  color: #e0e9ef; border: 1px solid #d5e5ef2e; border-radius: 12px; min-height: 44px;
+  background: linear-gradient(160deg,#ffffff09,transparent 70%),#18252f;
+  box-shadow: inset 0 1px 0 #f3faff0d,0 3px 9px #00000016;
+  transition: background .18s,border-color .18s,box-shadow .18s,scale .14s;
+}
+.cinema .record-settings-link { padding: 10px 14px; gap: 12px; margin-top: 8px; }
+.cinema .motion-toggle { padding: 9px 14px; }
+.cinema .landing-shortcuts { background: #15212bed; border-color: #d4e2e82c; box-shadow: inset 0 1px #ffffff12,0 8px 28px #0004; }
+.cinema .landing-shortcuts :is(a,button) { min-height: 44px; }
+.cinema .driver-card {
+  border-radius: 20px; border-color: #bfd2dd40;
+  background: linear-gradient(145deg,#ffffff0a,transparent 60%),#1b2e3b;
+  box-shadow: inset 0 1px #ffffff12,0 8px 24px #0002;
+}
+.cinema .driver-card.ai-card {
+  border-color: #e7c79b4d; background: linear-gradient(145deg,#d2b48a0e,transparent 60%),#2b2c2b;
+}
+.cinema .driver-card > svg { box-sizing: content-box; padding: 9px; border: 1px solid #d8e7ee2b; border-radius: 50%; background: #ffffff05; }
+.cinema .workbench :is(button,.file-button) { min-height: 44px; border-radius: 10px; background: linear-gradient(155deg,#ffffff0b,transparent),#20323f; }
+.cinema .drive-screen :is(.icon-button,.monitor-toggle) {
+  border-radius: 10px; background: #172630f5; border-color: #c5dce740; color: #e3edf2;
+  box-shadow: inset 0 1px #ffffff0d;
+}
+.cinema .drive-screen :is(.icon-button,.monitor-toggle)[aria-pressed=true] { background: #d5e2e8; border-color: #f1f7fa; color: #192b36; }
+.cinema .button:active:not(:disabled) { scale: .985; transform: none; box-shadow: inset 0 2px 4px #172c3424; }
+.cinema .button:hover:not(:disabled) { transform: none; }
+.cinema :is(.mascot-actions button,.motion-toggle,.record-settings-link):active:not(:disabled) { scale: .985; }
+.cinema :is(button,a,summary):focus-visible { outline: 2px solid #bde6ff; outline-offset: 4px; }
+.cinema :is(.button,.driver-card,.mascot-actions button):disabled { scale: 1; cursor: not-allowed; }
+.cinema .button:disabled > svg { transform: none; }
+/* 동의/거절은 같은 재질과 크기. 시각적 강조로 동의를 유도하지 않는다. */
+.cinema .record-choice-actions .button { border-radius: 12px; box-shadow: inset 0 1px #fff7; }
+.cinema .record-choice-actions .button:hover:not(:disabled) { box-shadow: inset 0 1px #fff7; }
+@supports (backdrop-filter: blur(10px)) {
+  .cinema :is(.button.secondary,.mascot-actions button,.motion-toggle,.record-settings-link) {
+    background: linear-gradient(155deg,#e9f3fa0b,transparent 75%),#15232ddd;
+    backdrop-filter: blur(10px);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .cinema .button.orange:hover:not(:disabled) { background: linear-gradient(155deg,#fff,#e7eef1); box-shadow: inset 0 1px #fff,0 8px 22px #02070c40; }
+  .cinema .button:hover:not(:disabled) svg { transform: translate(1px,-1px); }
+  .cinema :is(.button.secondary,.mascot-actions button,.motion-toggle,.record-settings-link):hover:not(:disabled) { background: linear-gradient(155deg,#edf7ff0e,transparent),#23343f; border-color: #d5e5ef61; }
+  .cinema .driver-card:hover:not(:disabled) { border-color: #d6e8f293; box-shadow: inset 0 1px #fff3,0 10px 26px #0003; }
+  .cinema .driver-card.ai-card:hover:not(:disabled) { border-color: #e7c79b99; }
+  .cinema .driver-card:hover > svg { transform: translate(1px,-1px); }
+}
+@media (hover: none) {
+  .cinema .driver-card:hover:not(:disabled),.cinema .driver-card:hover > svg { transform: none; }
+}
+
+/* 영상 본래의 구도를 유지하고 포스터에서 같은 캐릭터의 필름으로 연결한다. */
+.mascot-stage { height: auto; aspect-ratio: 832 / 480; background: #15202a; }
+.mascot-film { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mascot-poster { object-position: center; }
+.mascot-stage::after { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(#08121c70,transparent 25%,transparent 55%,#08121c66); }
+.mascot-stage-label { font-size: 9px; color: #edf2f5; }
+.mascot-stage-label span:last-child { color: #d1dce3; }
+.mascot-wordmark { font-size: clamp(26px,2.5vw,38px); font-weight: 450; letter-spacing: -.04em; }
+.mascot-caption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; }
+.mascot-caption strong { font-weight: 550; }
+.mascot-actions { margin: 0; gap: 6px; }
+.mascot-actions button { padding: 10px 12px; font-size: 12px; }
+.mascot-actions .mascot-pause { margin: 0; }
+.mascot-caption .film-status { flex-basis: 100%; margin: 0; }
+
+/* 매트 아래에서 문장이 한 줄씩 나타난다. 글자 분해와 스크롤 고정 없음. */
+.reveal-line { display: block; }
+.cinema h2 .reveal-line { overflow: clip; padding-block: .08em; margin-block: -.08em; }
+.reveal-line-inner { display: block; }
+.cinema h2 .reveal-text.text-entered { animation: none; }
+.cinema h2 .text-entered .reveal-line-inner {
+  animation: line-unveil .85s cubic-bezier(.22,1,.36,1) calc(var(--reveal-delay,0ms) + var(--line-delay,0ms)) both;
+}
+@keyframes line-unveil { from { transform: translateY(108%); opacity: .15; } to { transform: none; opacity: 1; } }
+.motion-paused .reveal-text,.motion-paused h2 .reveal-line-inner { animation: none !important; opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .continuous-backdrop :is(img,video) { transition: none; transform: none; }
+  .reveal-text.text-pending,.reveal-text.text-entered { animation: none; opacity: 1; transform: none; }
+  .cinema h2 .text-entered .reveal-line-inner { animation: none; opacity: 1; transform: none; }
+  .cinema :is(.button,.driver-card,.mascot-actions button,.motion-toggle,.record-settings-link) { transition: none; }
+  .cinema :is(.button,.mascot-actions button,.motion-toggle,.record-settings-link):active { scale: 1; }
+  .cinema .button:hover:not(:disabled) svg,.cinema .driver-card:hover > svg,.cinema .driver-card:hover:not(:disabled) { transform: none; }
+}
+@media (max-width: 600px) {
+  .cinema .film-scrim { background: linear-gradient(90deg,#09121ae8,#09121ad4 55%,#09121abf); }
+  .continuous-backdrop :is(img,video) { object-position: 56% center; }
+  .cinema :is(.section-heading h2,.experiment-copy h2,.lab-copy h2) { font-size: clamp(29px,7.6vw,38px); }
+  .cinema :is(.section-heading p,.experiment-copy > p,.lab-description p) { font-size: 14px; }
+  .mascot-stage-label { top: 16px; left: 16px; right: 16px; font-size: 8px; letter-spacing: 1px; }
+  .mascot-wordmark { left: 16px; bottom: 16px; }
+  .mascot-caption { padding: 20px; gap: 16px; }
+}

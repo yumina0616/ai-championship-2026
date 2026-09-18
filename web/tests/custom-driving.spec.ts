@@ -44,7 +44,7 @@ test("가져온 맵 목표에서 성공·재시작하고 기본 템플릿으로 
     });
   await page.getByRole("button", { name: "맵 적용", exact: true }).click();
   await page
-    .getByRole("button", { name: "이 공간에서 시작", exact: true })
+    .getByRole("button", { name: "직접 운전하기", exact: true })
     .click();
   await expect(page.getByRole("heading", { name: "NICE PARK." })).toBeVisible({
     timeout: 25000,

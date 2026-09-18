@@ -37,6 +37,7 @@ test("개발 테스트도 동의 전에는 전송하지 않고 합성 fixture만
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#garage");
+  await page.getByText("개발 도구", { exact: true }).click();
   await page.getByText("개발 전용 기여 테스트", { exact: false }).click();
   const send = page.getByRole("button", { name: "합성 기록 저장 테스트" });
   await expect(send).toBeDisabled();

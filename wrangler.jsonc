@@ -6,6 +6,9 @@
   "compatibility_date": "2026-09-16",
   "workers_dev": true,
   "preview_urls": false,
+  "routes": [
+    { "pattern": "mrpark.ai.kr", "custom_domain": true }
+  ],
   "vars": {
     "COLLECTION_ENABLED": "true",
     "RETENTION_CONFIGURED": "true",

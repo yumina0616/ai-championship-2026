@@ -55,6 +55,11 @@ test("관측→명령→다음 상태 정렬과 불완전/실패/timeout roundtr
   });
   expect(e.header.consent.status).toBe("not_requested");
 });
+test("운전석과 보조 카메라 도움 메타데이터를 보존한다", () => {
+  const e = sample();
+  e.steps.forEach(step => { step.rawInput.viewMode = "driver"; step.rawInput.assistanceFlags = ["rear-camera", "rear-mirror"]; });
+  expect(parseEpisode(JSON.stringify(e))).toEqual(e);
+});
 test("손상·중복·누락·허위 성공·센서·외부 설정 거부", () => {
   for (const mutate of [
     (e: ReturnType<typeof sample>) => {

@@ -100,22 +100,3 @@ export function useCollection() {
   };
   return { available, enabled: consent && available, message, busy, upload, changeConsent, remove };
 }
-
-export function CollectionSettings({ collection }: { collection: ReturnType<typeof useCollection> }) {
-  return <section className="collection-settings" aria-label="학습용 기록 전송">
-    <h3>미스터팍과 함께 배우기</h3>
-    <p>선택하면 다음 주행부터 완료된 환경·가상 센서·조작·결과를 비공개 서버에 자동 전송해요.
-      이름·계정·실제 위치·원본 시각은 보내지 않아요. 원본은 30일 보관하고 검증 후 학습에 사용할 수 있어요.</p>
-    <label><input type="checkbox" checked={collection.enabled} disabled={!collection.available || collection.busy}
-      onChange={e => collection.changeConsent(e.target.checked)} /> 학습용 기록 전송에 동의하고 켜기</label>
-    <p>로그인 없이 선택할 수 있고, 거절해도 모든 연습을 이용할 수 있어요.
-      현재는 ‘이 브라우저에 주행 기록 보관’도 켜야 전송할 기록이 만들어져요.
-      탭 종료·불완전 기록·과거 기록은 전송하지 않아요.</p>
-    {!collection.available && <p>현재 서버 수집은 꺼져 있거나 연결할 수 없어요.</p>}
-    <button className="text-link" disabled={collection.busy} onClick={() => void collection.remove()}>
-      {collection.busy ? "서버 기록 삭제 중" : "전송 끄고 이 브라우저의 서버 기록 삭제"}
-    </button>
-    <p><a href="/data-notice.html" target="_blank" rel="noreferrer">수집·삭제 안내</a> · <a href="mailto:jinhyeong9568@gmail.com">비공개 문의</a></p>
-    {collection.message && <p role="status">{collection.message}</p>}
-  </section>;
-}

@@ -2,9 +2,9 @@
 export const storyChapters = [
   {
     label: "DRIVE",
-    title: "Every move.",
-    subtitle: "A possibility.",
-    description: "작은 움직임이, 새로운 가능성으로.",
+    title: "Small space.",
+    subtitle: "Big possibilities.",
+    description: "주차가 조금, 즐거워지는 곳.",
   },
   {
     label: "SPACE",
@@ -46,23 +46,23 @@ export function storyCamera(progress: number, narrow: boolean) {
   const p = cycle(progress);
   const positions: Point[] = narrow
     ? [
-        [15.5, 8.99, 20.15],
-        [8, 31, 16],
-        [17, 17, 18],
+        [10.5, 7.2, 15.4],
+        [8, 25, 16],
+        [13, 13, 16],
       ]
     : [
-        [10, 5.8, 13],
-        [8, 24, 10],
-        [12, 12, 12],
+        [8.2, 4.4, 10.2],
+        [8, 21, 10],
+        [10, 9, 12],
       ];
   const targets: Point[] = narrow
     ? [
-        [-1.5, -3.5, 1.5],
+        [.2, -2.1, 2.8],
         [0, -5, 1],
         [0, -4, 2],
       ]
     : [
-        [-4, 0.5, 1.5],
+        [-1.8, .5, 3.1],
         [-4, 0, 0],
         [-3, 0, 2],
       ];

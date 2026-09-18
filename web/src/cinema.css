@@ -910,6 +910,7 @@
 
 /* 자동 재생 카메라. 페이지 스크롤/마우스는 촬영 경로에 영향을 주지 않습니다. */
 .cinema.landing .world-stage {
+  position: absolute;
   transition: none;
 }
 .cinema.landing .world-stage canvas {

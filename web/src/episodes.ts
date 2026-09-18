@@ -46,6 +46,8 @@ export const contextFlags = [
   "steering-return",
   "sensor-sound",
   "spectator",
+  "rear-camera",
+  "rear-mirror",
 ];
 export function beginEpisode(
   scenario: Scenario,
@@ -272,7 +274,7 @@ function outcome(v: unknown) {
 function context(v: unknown): DrivingContext {
   const r = obj(v);
   if (
-    !["orbit", "follow", "top", "rear"].includes(String(r.viewMode)) ||
+    !["orbit", "follow", "top", "rear", "driver"].includes(String(r.viewMode)) ||
     !Array.isArray(r.assistanceFlags) ||
     r.assistanceFlags.length > contextFlags.length ||
     !r.assistanceFlags.every((f) => contextFlags.includes(String(f)))

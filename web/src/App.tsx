@@ -17,6 +17,8 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   CircleHelp,
   Flag,
   Grid2X2,
@@ -48,8 +50,18 @@ import EpisodeLibrary from "./EpisodeLibrary";
 import { mapScenario, type ParkingMap } from "./maps";
 import { POLICY_LABEL, type LoadedPolicy } from "./policy-info";
 const ParkingScene = lazy(() => import("./ParkingScene"));
+const SensorLab = lazy(() => import("./SensorLab"));
+const MascotShowcase = lazy(() => import("./MascotShowcase"));
 
-import { CollectionSettings, useCollection } from "./collection";
+import { useCollection } from "./collection";
+import RecordChoice, { RECORD_CHOICE_KEY, RECORD_CHOICE_VERSION } from "./RecordChoice";
+import DriveWelcome from "./DriveWelcome";
+import type { MonitorMode } from "./CameraMonitor";
+import { OPENING_SHOTS } from "./opening";
+import { LaunchLoader, RevealText, SectionNumber, SignalRibbon, useSurfaceMotion } from "./MotionDesign";
+import ScrollFilmBackdrop from "./ScrollFilmBackdrop";
+import { outsideDrivingArea } from "./scene-boundary";
+import type { VehicleAssetState } from "./DetailedCar";
 
 function Logo() {
   return (
@@ -62,6 +74,20 @@ function Logo() {
       </span>
     </span>
   );
+}
+function LandingShortcuts() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => { frame = 0; const garage = document.getElementById("garage"); setVisible(!!garage && garage.getBoundingClientRect().bottom < innerHeight * .35); };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
+    const resize = new ResizeObserver(schedule); resize.observe(document.body);
+    window.addEventListener("scroll", schedule, { passive: true }); window.addEventListener("resize", schedule); schedule();
+    return () => { cancelAnimationFrame(frame); resize.disconnect(); window.removeEventListener("scroll", schedule); window.removeEventListener("resize", schedule); };
+  }, []);
+  return <aside className="landing-shortcuts" hidden={!visible} aria-label="주차장 빠른 이동">
+    <a href="#garage">주차장 고르기 <ArrowUpRight size={16} /></a>
+  </aside>;
 }
 function Wheel({ angle = 0 }: { angle?: number }) {
   return (
@@ -97,21 +123,6 @@ function MiniMap({ variant }: { variant: TemplateId }) {
     </div>
   );
 }
-function Buddy() {
-  return (
-    <div className="buddy" aria-hidden="true">
-      <div className="buddy-aerial" />
-      <div className="buddy-head">
-        <i />
-        <i />
-      </div>
-      <div className="buddy-body" />
-      <b />
-      <b />
-    </div>
-  );
-}
-
 export default function App() {
   const [view, setView] = useState<"landing" | "drive">("landing");
   const [template, setTemplate] = useState<TemplateId>("open");
@@ -119,12 +130,18 @@ export default function App() {
   const [editorRevision, setEditorRevision] = useState(0);
   const [recordLocally, setRecordLocally] = useState(() => {
     try {
-      return localStorage.getItem("parkside-record-locally") !== "off";
+      return localStorage.getItem("parkside-record-locally") === "on";
     } catch {
-      return true;
+      return false;
     }
   });
   const [preferenceError, setPreferenceError] = useState("");
+  const [recordPromptFor, setRecordPromptFor] = useState<Mode | "settings" | null>(null);
+  const [launchAfterChoice, setLaunchAfterChoice] = useState<Mode | null>(null);
+  const recordChoiceSeen = useRef((() => {
+    try { return localStorage.getItem(RECORD_CHOICE_KEY) === RECORD_CHOICE_VERSION; } catch { return false; }
+  })());
+  const [cockpitFolded, setCockpitFolded] = useState(false);
   const [quality, setQuality] = useState<"high" | "low">(() => {
     try {
       return localStorage.getItem("parkside-quality") === "low"
@@ -135,7 +152,10 @@ export default function App() {
     }
   });
   const [mode, setMode] = useState<Mode>("human");
+  const [vehicleAsset, setVehicleAsset] = useState<VehicleAssetState>("loading");
+  const assetLoading = quality === "high" && vehicleAsset === "loading";
   const [camera, setCamera] = useState<CameraMode>("orbit");
+  const [monitor, setMonitor] = useState<MonitorMode | null>(null);
   const [sensors, setSensors] = useState(false);
   const [sensorSound, setSensorSound] = useState(false);
   const [grid, setGrid] = useState(false);
@@ -147,9 +167,37 @@ export default function App() {
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const [motionPaused, setMotionPaused] = useState(false);
+  const motionScrollAnchor = useRef<number | null>(null);
+  const toggleMotion = () => {
+    const garage = document.getElementById("garage");
+    motionScrollAnchor.current = garage && scrollY > innerHeight ? garage.getBoundingClientRect().top : null;
+    setMotionPaused(v => !v);
+  };
+  useLayoutEffect(() => {
+    const previous = motionScrollAnchor.current;
+    motionScrollAnchor.current = null;
+    const garage = document.getElementById("garage");
+    if (previous !== null && garage) window.scrollBy({ top: garage.getBoundingClientRect().top - previous, behavior: "instant" });
+  }, [motionPaused]);
+  useSurfaceMotion(view === "landing" && !reduceMotion && !motionPaused);
   const [introDismissed, setIntroDismissed] = useState(false);
-  const [opening, setOpening] = useState(!reduceMotion);
+  const [opening, setOpening] = useState(() => !reduceMotion && (
+    !location.hash || location.hash === "#" ||
+    (["#garage", "#experiment"].includes(location.hash) &&
+      (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined)?.type === "reload")
+  ));
+  useLayoutEffect(() => {
+    if (!opening) return;
+    // 차고에서 새로고침해도 복원된 스크롤 아래에서 오프닝이 끝나지 않게 한다.
+    const previous = history.scrollRestoration;
+    history.scrollRestoration = "manual";
+    window.scrollTo({ top: 0, behavior: "instant" });
+    const frame = requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    return () => { cancelAnimationFrame(frame); history.scrollRestoration = previous; };
+  }, [opening]);
   const [openingFade, setOpeningFade] = useState(false);
+  const [introShot, setIntroShot] = useState(0);
+  const [boardingAt, setBoardingAt] = useState<number | null>(null);
   const finishOpening = useCallback(() => {
     setOpening(false);
     setOpeningFade(true);
@@ -162,16 +210,29 @@ export default function App() {
   useEffect(() => {
     if (reduceMotion || motionPaused || template !== "open") setOpening(false);
   }, [reduceMotion, motionPaused, template]);
+  useEffect(() => {
+    if (!opening) return;
+    // 오프닝 중에도 탐색은 자유롭다. 화면 밖 자막이 다른 섹션을 가리지 않는다.
+    const exitOnScroll = () => {
+      const hero = document.querySelector(".hero");
+      if (hero && hero.getBoundingClientRect().bottom < innerHeight * .45) setOpening(false);
+    };
+    const exitOnNavigation = () => { if (location.hash && location.hash !== "#") setOpening(false); };
+    window.addEventListener("scroll", exitOnScroll, { passive: true });
+    window.addEventListener("hashchange", exitOnNavigation);
+    return () => {
+      window.removeEventListener("scroll", exitOnScroll);
+      window.removeEventListener("hashchange", exitOnNavigation);
+    };
+  }, [opening]);
   const [departing, setDeparting] = useState(false);
   const [storyProgress, setStoryProgress] = useState(0);
   useEffect(() => {
+    if (assetLoading) return;
     const timer = window.setTimeout(() => setIntroDismissed(true), 2000);
     return () => window.clearTimeout(timer);
-  }, []);
-  const [sceneBox, setSceneBox] = useState({
-    top: 0,
-    height: window.innerHeight,
-  });
+  }, [assetLoading]);
+  const [sceneHeight, setSceneHeight] = useState(window.innerHeight);
   const customScenario = useMemo(
     () => (customMap ? mapScenario(customMap) : undefined),
     [customMap],
@@ -191,6 +252,8 @@ export default function App() {
             ...(grid ? ["grid"] : []),
             ...(camera === "rear" ? ["reverse-guide"] : []),
             ...(sensorSound ? ["sensor-sound"] : []),
+            ...(monitor === "rear" ? ["rear-camera"] : []),
+            ...(monitor === "mirror" ? ["rear-mirror"] : []),
           ],
   };
   const wheelDrag = useRef<{ id: number; x: number; value: number } | null>(
@@ -227,10 +290,15 @@ export default function App() {
     );
     setState("error");
   }, [driving.stop]);
+  const sceneUnavailable = useCallback(() => {
+    setVehicleAsset("fallback");
+    if (view === "drive" || departing) sceneFailed(); else finishOpening();
+  }, [view, departing, sceneFailed, finishOpening]);
   const selected = templates.find((t) => t.id === template)!;
   const observation = driving.result?.observation;
   const speed = Math.abs((observation?.speedMps ?? 0) * 3.6);
   const ended = driving.result?.outcome.reason;
+  const leftDrivingArea = outsideDrivingArea(driving.result, driving.scenario);
   const parkConfirm =
     mode === "human" &&
     state === "ready" &&
@@ -253,37 +321,27 @@ export default function App() {
   const chapter = staticStory ? 0 : chapterAt(storyProgress);
   const storySensor = sensorFeedback(driving.result, driving.scenario);
 
-  // 같은 Canvas를 유지하고 표시 영역만 옮겨 카메라/조명 문맥이 끊기지 않게 합니다.
+  // Canvas는 유지하되 랜딩에서는 문서와 함께 스크롤합니다.
+  // fixed 위치를 scroll → RAF → React로 따라가면 아래 섹션에 밝은 3D가 새어 나옵니다.
   useLayoutEffect(() => {
     const area = document.querySelector(
       view === "landing" ? ".hero" : ".driving-stage",
     );
     if (!area) return;
-    let frame = 0;
     const measure = () => {
-      const rect = area.getBoundingClientRect();
-      setSceneBox({
-        top: view === "landing" ? rect.top : 0,
-        height:
-          view === "landing" ? rect.height : Math.max(window.innerHeight, 780),
-      });
-    };
-    const scroll = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(measure);
+      setSceneHeight(
+        view === "landing"
+          ? area.getBoundingClientRect().height
+          : Math.max(window.innerHeight, 780),
+      );
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(area);
-    const track = document.querySelector(".story-scroll");
-    if (track) observer.observe(track);
     window.addEventListener("resize", measure);
-    window.addEventListener("scroll", scroll, { passive: true });
     return () => {
-      cancelAnimationFrame(frame);
       observer.disconnect();
       window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", scroll);
     };
   }, [view, staticStory]);
 
@@ -356,14 +414,44 @@ export default function App() {
     return () => document.removeEventListener("keydown", handle);
   }, [view, state, driving.pause]);
 
-  async function start() {
-    if (state === "loading") return;
+  useEffect(() => {
+    if (!launchAfterChoice) return;
+    setLaunchAfterChoice(null);
+    // 기록 설정이 반영된 render 뒤에 시작해 이전 upload/recordLocally를 쓰지 않는다.
+    void start(launchAfterChoice, true);
+  }, [launchAfterChoice]);
+
+  function confirmRecords(local: boolean, share: boolean) {
+    setRecordLocally(local);
+    collection.changeConsent(share);
+    recordChoiceSeen.current = true;
+    try {
+      localStorage.setItem("parkside-record-locally", local ? "on" : "off");
+      localStorage.setItem(RECORD_CHOICE_KEY, RECORD_CHOICE_VERSION);
+      setPreferenceError("");
+    } catch { setPreferenceError("선택은 이번 탭에만 적용돼요. 새로고침하면 다시 확인해주세요."); }
+    const next = recordPromptFor;
+    setRecordPromptFor(null);
+    if (next && next !== "settings") setLaunchAfterChoice(next);
+  }
+
+  async function start(selectedMode: Mode = mode, recordsConfirmed = false) {
+    if (state === "loading" || assetLoading) return;
+    if (!recordsConfirmed && !recordChoiceSeen.current) {
+      setOpening(false);
+      setRecordPromptFor(selectedMode);
+      return;
+    }
+    setCockpitFolded(false);
+    setMode(selectedMode);
     if (state === "error") setSceneRevision((n) => n + 1);
     setIntroDismissed(true);
     setOpening(false);
     setOpeningFade(false);
     const cinematicEntry = view === "landing" && !reduceMotion && !motionPaused;
     const began = performance.now();
+    const boarding = selectedMode === "mascot" && !reduceMotion && !motionPaused;
+    setBoardingAt(boarding ? began : null);
     const id = ++requestId.current;
     abort.current?.abort();
     const controller = new AbortController();
@@ -373,12 +461,13 @@ export default function App() {
     setState("loading");
     setError("");
     setCamera("follow");
+    setMonitor(null);
     driving.reset();
     window.scrollTo({ top: 0, behavior: "instant" });
     // 공개 환경의 첫 AI 실행은 TF.js chunk 다운로드·초기화까지 포함한다.
     const timeout = window.setTimeout(
       () => controller.abort("timeout"),
-      mode === "mascot" ? 30000 : 8000,
+      selectedMode === "mascot" ? 30000 : 8000,
     );
     let loaded: LoadedPolicy | null = null;
     try {
@@ -390,11 +479,11 @@ export default function App() {
         setDeparting(false);
       }
       await loadPreview(controller.signal);
-      if (mode === "mascot") {
+      if (selectedMode === "mascot") {
         const { loadPolicy } = await import("./policy");
         loaded = await loadPolicy(driving.scenario, controller.signal);
       }
-      if (cinematicEntry && !controller.signal.aborted) {
+      if ((cinematicEntry || boarding) && !controller.signal.aborted) {
         await new Promise<void>((resolve) => {
           const done = () => {
             window.clearTimeout(timer);
@@ -403,7 +492,7 @@ export default function App() {
           };
           const timer = window.setTimeout(
             done,
-            Math.max(0, 1700 - (performance.now() - began)),
+            Math.max(0, (boarding ? 4200 : 1700) - (performance.now() - began)),
           );
           controller.signal.addEventListener("abort", done, { once: true });
         });
@@ -420,7 +509,7 @@ export default function App() {
         setError(
           controller.signal.reason === "timeout"
             ? "응답이 늦어지고 있어요. 다시 시도해주세요."
-            : mode === "mascot" && cause instanceof Error
+            : selectedMode === "mascot" && cause instanceof Error
               ? cause.message
               : "실행 리소스를 불러오지 못했어요. 인터넷 연결을 확인해주세요.",
         );
@@ -429,9 +518,11 @@ export default function App() {
     } finally {
       loaded?.dispose();
       window.clearTimeout(timeout);
+      if (id === requestId.current) setBoardingAt(null);
     }
   }
   function leave() {
+    setBoardingAt(null);
     setDeparting(false);
     requestId.current++;
     abort.current?.abort();
@@ -510,11 +601,13 @@ export default function App() {
         (motionPaused ? " motion-paused" : "") +
         (opening ? " opening-drive" : "") +
         (openingFade ? " opening-handoff" : "")
+        + (assetLoading ? " asset-loading" : "")
       }
     >
+      {view === "landing" && <ScrollFilmBackdrop motionOff={reduceMotion || motionPaused} />}
       <div
         className="world-stage"
-        style={{ top: sceneBox.top, height: sceneBox.height }}
+        style={{ top: 0, height: sceneHeight }}
         data-testid="persistent-scene"
       >
         <Suspense
@@ -530,8 +623,13 @@ export default function App() {
             result={driving.result}
             motion={driving.motion}
             opening={opening}
+            onIntroShot={setIntroShot}
+            onAssetState={setVehicleAsset}
+            boardingAt={boardingAt}
+            mascotDriver={mode === "mascot" && view === "drive"}
             onOpeningDone={finishOpening}
             cameraMode={view === "landing" && !departing ? "orbit" : camera}
+            monitor={view === "drive" ? monitor : null}
             sensors={sensors || (view === "landing" && chapter === 2)}
             onStoryProgress={setStoryProgress}
             grid={view === "drive" && grid}
@@ -539,13 +637,15 @@ export default function App() {
             brake={driving.held.includes("brake")}
             reverse={driving.gear === "R"}
             driving={view === "drive" || departing}
-            onUnavailable={
-              view === "drive" || departing ? sceneFailed : finishOpening
-            }
+            onUnavailable={sceneUnavailable}
           />
         </Suspense>
+        {assetLoading && <LaunchLoader onLowQuality={() => {
+          setQuality("low");
+          try { localStorage.setItem("parkside-quality", "low"); } catch { /* 이번 탭에 적용 */ }
+        }} />}
       </div>
-      {!introDismissed && (
+      {!introDismissed && !assetLoading && (
         <div className="opening-signature" aria-hidden="true">
           <span>Mr.Park</span>
           <small>A PHYSICAL AI EXPERIMENT</small>
@@ -557,13 +657,19 @@ export default function App() {
       >
         조작 영역으로 바로가기
       </a>
-      {opening && (
+      {opening && !assetLoading && (
         <aside className="opening-caption" aria-label="기준 제어기 주차 시연">
+          <div className="intro-scan-sweep" key={`sweep-${introShot}`} aria-hidden="true" />
           <span className="opening-eyebrow">
-            <i /> BASELINE / AUTOPARK
+            <i /> PHYSICAL AI / REALTIME 3D
           </span>
-          <strong>One smooth move.</strong>
-          <p>기준 제어기 주차 기록 · 2배속 재생 · 학습 AI 아님</p>
+          <div className="intro-shot-copy" key={introShot}>
+            <span>{OPENING_SHOTS[introShot].label}</span>
+            <strong>{OPENING_SHOTS[introShot].title}</strong>
+            <p>{OPENING_SHOTS[introShot].detail}</p>
+          </div>
+          <small>시뮬레이션 기록 재생 + 카메라 연출 · 학습 AI 아님</small>
+          <div className="intro-shot-track" aria-hidden="true">{OPENING_SHOTS.map((s, i) => <i key={s.label} className={i <= introShot ? "active" : ""} />)}</div>
           <button onClick={finishOpening}>
             오프닝 건너뛰기 <ArrowUpRight size={14} />
           </button>
@@ -571,6 +677,7 @@ export default function App() {
       )}
       {view === "landing" ? (
         <>
+          <LandingShortcuts />
           <header className="site-header">
             <a href="#" aria-label="Mr.Park 미스터팍 홈">
               <Logo />
@@ -598,7 +705,7 @@ export default function App() {
                   {storyChapters[chapter].label}
                 </div>
                 <div className="story-frame" aria-hidden="true">
-                  <span>LOCAL SIMULATION / 01</span>
+                  <span>MR.PARK / THE FIRST DRIVE</span>
                   <span>COMPACT · 4.4 M</span>
                 </div>
                 <div className="hero-topline">
@@ -624,11 +731,11 @@ export default function App() {
                     </span>
                   </h1>
                   <div className="hero-description">
-                    <h2>작은 움직임이, 새로운 가능성으로.</h2>
+                    <h2>주차가 조금, 즐거워지는 곳.</h2>
                     <p>
-                      직접 운전하고. 공간을 감각하고.
+                      당신의 주차장, 당신의 속도로.
                       <br />
-                      같은 주차장에서 다른 시도를 발견하세요.
+                      미스터팍과 함께 한 번 더 도전해보세요.
                     </p>
                   </div>
                 </div>
@@ -742,10 +849,10 @@ export default function App() {
                 <div className="hero-actions">
                   <button
                     className="button orange"
-                    disabled={state === "loading"}
+                    disabled={state === "loading" || assetLoading}
                     onClick={() => {
                       if (chapter === 2) setSensors(true);
-                      void start();
+                      void start("human");
                     }}
                   >
                     바로 운전하기 <ArrowUpRight size={21} />
@@ -783,13 +890,6 @@ export default function App() {
                     실험
                   </span>
                   <span>직접 운전 / 가상 거리 센서 / 로컬 결과</span>
-                  <button
-                    className="motion-toggle"
-                    aria-pressed={motionPaused}
-                    onClick={() => setMotionPaused(!motionPaused)}
-                  >
-                    장식 모션 {motionPaused ? "켜기" : "멈추기"}
-                  </button>
                   <a href="#garage" aria-label="차고로 이동">
                     <ArrowDown size={19} />
                   </a>
@@ -810,32 +910,29 @@ export default function App() {
                 <p>개발용 차량 · 무잡음 가상 거리 센서 · 실험용 학습 정책</p>
               </section>
             )}
-            <div className="play-ribbon" aria-hidden="true">
-              <span>LESS PRESSURE</span>
-              <b>✳</b>
-              <span>MORE PLAY</span>
-              <b>↗</b>
-              <span>ONE MORE TRY</span>
-              <b>✳</b>
-              <span>FEEL THE SPACE</span>
-            </div>
+            <section className="design-manifesto" aria-labelledby="manifesto-title">
+              <span className="eyebrow">LESS PRESSURE. MORE POSSIBILITY.</span>
+              <h2 id="manifesto-title"><RevealText>작은 한 칸에서,<br /><em>시작되는 가능성.</em></RevealText></h2>
+              <div className="manifesto-detail">
+                <p><RevealText delay={100}>조금 서툴러도 괜찮아요.<br />공간을 바꾸고, 감각을 익히고, 다시 시도하세요.</RevealText></p>
+                <div><span>01 / CREATE</span><span>02 / DRIVE</span><span>03 / DISCOVER</span></div>
+              </div>
+            </section>
+            <SignalRibbon />
             <section
               id="garage"
               className="garage-section"
               aria-labelledby="garage-title"
             >
+              <SectionNumber number="01" label="BUILD YOUR WORLD" />
               <div className="section-heading">
                 <div>
-                  <span className="eyebrow">01 — CHOOSE YOUR SPACE</span>
                   <h2 id="garage-title">
-                    오늘은 어디에
-                    <br className="mobile-break" /> 주차해볼까?
+                    <RevealText>한 칸을 고르고.<br /><em>바로 플레이.</em></RevealText>
                   </h2>
                 </div>
                 <p>
-                  같은 자리, 다른 시도. 나만의 움직임을 찾아보세요.
-                  <br />
-                  템플릿으로 시작하거나 나만의 주차장을 편집해보세요.
+                  <RevealText delay={100}>공간을 고르면 준비 끝. 직접 운전하거나 미스터팍에게 맡겨보세요.</RevealText>
                 </p>
               </div>
               <fieldset className="mission-list">
@@ -859,7 +956,7 @@ export default function App() {
                       aria-label={t.title}
                     />
                     <div className="mission-header">
-                      <span>EXPERIMENT / 0{i + 1}</span>
+                      <span>0{i + 1} / {i === 0 ? "OPEN" : i === 1 ? "NARROW" : "OBSTACLE"}</span>
                       <span className="mission-check">
                         {!customMap && template === t.id ? (
                           <Check size={15} />
@@ -872,11 +969,8 @@ export default function App() {
                     <div className="mission-caption">
                       <div>
                         <h3>{t.title}</h3>
-                        <p>{t.description}</p>
+                        <small className="mission-hint">{t.tag}</small>
                       </div>
-                      <span className="level">
-                        {i === 0 ? "OPEN" : i === 1 ? "NARROW" : "OBSTACLE"}
-                      </span>
                     </div>
                   </label>
                 ))}
@@ -888,146 +982,81 @@ export default function App() {
                   setEditorRevision((n) => n + 1);
                 }}
               />
-              <MapEditor
-                key={editorRevision}
-                template={template}
-                initialMap={customMap}
-                onApply={(map) => {
-                  setOpening(false);
-                  setCustomMap(map);
-                }}
-              />
               {customMap && (
                 <p className="availability">
                   적용한 맵: {customMap.name} · 아래 시작 버튼으로 운전해보세요.
                 </p>
               )}
-              <div className="garage-console">
-                <div className="car-spec">
-                  <span className="spec-icon">
-                    <Route size={26} />
-                  </span>
-                  <div>
-                    <strong>COMPACT / 01</strong>
-                    <span>개발용 차량 · 4.4 × 1.8 m · 축간거리 2.6 m</span>
-                  </div>
+              <div className="launch-bay">
+                <div className="launch-heading"><span>READY TO PLAY</span><h3>오늘의 드라이버는?</h3></div>
+                <div className="driver-actions">
+                  <button ref={garageStart} className="driver-card human-card" aria-label="직접 운전하기"
+                    disabled={state === "loading" || assetLoading} onClick={() => void start("human")}>
+                    <span className="driver-emblem" aria-hidden="true"><Route size={38} /></span>
+                    <span><small>YOU / PLAYER 01</small><strong>직접 운전하기</strong><span>내 손으로 감각 익히기</span></span><ArrowUpRight aria-hidden="true" />
+                  </button>
+                  <button className="driver-card ai-card" aria-label="미스터팍에게 맡기기" aria-describedby="policy-limit"
+                    disabled={state === "loading" || assetLoading} onClick={() => void start("mascot")}>
+                    <span className="driver-emblem robot-face" aria-hidden="true"><i /><i /></span>
+                    <span><small>MR.PARK / AI DRIVER</small><strong>미스터팍에게 맡기기</strong><span>같은 공간, AI의 다른 도전</span></span><ArrowUpRight aria-hidden="true" />
+                  </button>
                 </div>
-                <fieldset className="mode-switch">
-                  <legend className="sr-only">운전 방식</legend>
-                  <label className={mode === "human" ? "selected" : ""}>
-                    <input
-                      type="radio"
-                      name="mode"
-                      checked={mode === "human"}
-                      onChange={() => setMode("human")}
-                    />
-                    직접 운전
-                  </label>
-                  <label className={mode === "mascot" ? "selected" : ""}>
-                    <input
-                      type="radio"
-                      name="mode"
-                      checked={mode === "mascot"}
-                      onChange={() => setMode("mascot")}
-                    />
-                    미스터팍 <small>AI 실험 모델</small>
-                  </label>
-                </fieldset>
-                <button
-                  ref={garageStart}
-                  className="button orange"
-                  disabled={state === "loading"}
-                  onClick={start}
-                >
-                  {mode === "human" ? "이 공간에서 시작" : "미스터팍 운전 보기"}
-                  <ArrowRight size={19} />
+                <p id="policy-limit" className="launch-note">미스터팍은 실험 모델이에요. 충돌하거나 주차에 실패할 수 있어요.</p>
+                <button className="record-settings-link" onClick={() => setRecordPromptFor("settings")}>
+                  기록 설정 <span>{recordLocally ? collection.enabled ? "브라우저 보관 · 학습 전송 켜짐" : "브라우저에만 보관" : "기록 안 함"}</span><ArrowUpRight size={16} />
                 </button>
+                {preferenceError && <p role="status">{preferenceError}</p>}
               </div>
-              <p className="availability">
-                {recordLocally
-                  ? "주행은 이 브라우저에 최근 5회만 보관해요."
-                  : "다음 주행은 기록하지 않아요. 기존 기록은 유지돼요."}{" "}
-                서버 전송은 아래 학습용 전송 설정을 켠 경우에만 해요.
-              </p>
-              <label className="local-record-choice">
-                그래픽 품질
-                <select
-                  aria-label="그래픽 품질"
-                  value={quality}
-                  onChange={(e) => {
+              <MapEditor key={editorRevision} template={template} initialMap={customMap}
+                onApply={(map) => { setOpening(false); setCustomMap(map); }} />
+              <details className="garage-settings">
+                <summary>화면 설정 · AI 모델 정보</summary>
+                <label className="local-record-choice">그래픽 품질
+                  <select aria-label="그래픽 품질" value={quality} onChange={(e) => {
                     const next = e.target.value as "high" | "low";
+                    if (next === "high") setVehicleAsset("loading");
                     setQuality(next);
-                    try {
-                      localStorage.setItem("parkside-quality", next);
-                    } catch {
-                      setPreferenceError("그래픽 설정은 이번 탭에만 적용돼요.");
-                    }
-                  }}
-                >
-                  <option value="high">고화질</option>
-                  <option value="low">성능 우선</option>
-                </select>
-              </label>
-              <p className="availability">
-                성능 우선은 그림자와 렌더 해상도만 낮춰요. 차량 물리·충돌·센서
-                계산은 동일해요.
-              </p>
-              <label className="local-record-choice">
-                <input
-                  type="checkbox"
-                  checked={recordLocally}
-                  onChange={(e) => {
-                    const enabled = e.target.checked;
-                    setRecordLocally(enabled);
-                    try {
-                      localStorage.setItem(
-                        "parkside-record-locally",
-                        enabled ? "on" : "off",
-                      );
-                      setPreferenceError("");
-                    } catch {
-                      setPreferenceError(
-                        "설정은 이번 탭에만 적용돼요. 새로고침하면 다시 확인해주세요.",
-                      );
-                    }
-                  }}
-                />{" "}
-                이 브라우저에 주행 기록 보관
-              </label>
-              {preferenceError && <p role="status">{preferenceError}</p>}
-              <CollectionSettings collection={collection} />
+                    try { localStorage.setItem("parkside-quality", next); }
+                    catch { setPreferenceError("그래픽 설정은 이번 탭에만 적용돼요."); }
+                  }}><option value="high">고화질</option><option value="low">성능 우선</option></select>
+                </label>
+                <p>성능 우선에서도 차량 물리·충돌·센서 계산은 동일해요.</p>
+                <label className="local-record-choice motion-preference">
+                  <input type="checkbox" checked={motionPaused || reduceMotion} disabled={reduceMotion} onChange={toggleMotion} />
+                  화면 움직임 줄이기
+                </label>
+                <p>{reduceMotion ? "기기의 동작 줄이기 설정을 적용하고 있어요." : "소개 영상과 배경 연출을 멈춰요. 실제 운전은 그대로 이용할 수 있어요."}</p>
+                <p>실험 정책 {POLICY_LABEL} · 미관측 환경 평가 0/1 성공. 편집한 맵은 미평가 환경이에요.
+                  이상적인 자기 위치와 무잡음 36-ray 센서를 사용하며 실차 자율주행 성능을 뜻하지 않아요.</p>
+              </details>
               <EpisodeLibrary
                 onForget={driving.forgetEpisode}
                 latest={driving.lastEpisode}
                 error={driving.storageError}
               />
-              {import.meta.env.DEV && <LocalContributionTest />}
-              {mode === "mascot" && (
-                <p className="availability" role="status">
-                  실험 정책 {POLICY_LABEL} · 동일 차량·무잡음 36-ray 센서로
-                  실행해요. 미관측 환경 평가 0/1 성공. 편집한 맵은 미평가
-                  환경이며 충돌하거나 실패할 수 있어요. 이상적인 자기 위치를
-                  사용하며 실차 자율주행 성능을 뜻하지 않아요.
-                </p>
-              )}
+              {import.meta.env.DEV && <details className="garage-settings"><summary>개발 도구</summary><LocalContributionTest /></details>}
             </section>
             <section id="experiment" className="experiment-section">
               <div className="experiment-copy">
-                <span className="eyebrow">02 — MORE THAN A PARKING GAME</span>
+                <SectionNumber number="02" label="MEET YOUR CO-DRIVER" />
                 <h2>
-                  당신의 한 번 더가,
+                  <RevealText>당신의 한 번 더가,
                   <br />
-                  로봇의 새로운 시선으로.
+                  로봇의 새로운 시선으로.</RevealText>
                 </h2>
                 <p>
-                  내가 직접 운전하고, 미스터팍도 같은 공간에 도전하고.
+                  <RevealText delay={100}>내가 직접 운전하고, 미스터팍도 같은 공간에 도전하고.
                   <br />
                   우리는 성공뿐 아니라 실패에서도 배울 수 있는 주차장을
-                  만들어요.
+                  만들어요.</RevealText>
                 </p>
                 <button
-                  className="text-link"
-                  onClick={() => setDialog("about")}
+                  className="button orange mascot-start" disabled={state === "loading" || assetLoading} onClick={() => void start("mascot")}
+                >
+                  미스터팍 주행 보기 <ArrowUpRight size={18} />
+                </button>
+                <p className="mascot-scope">선택한 주차장에서 실행해요. 아직 배우는 중인 실험 모델이에요.</p>
+                <button className="text-link" onClick={() => setDialog("about")}
                 >
                   어떤 실험인가요? <ArrowUpRight size={18} />
                 </button>
@@ -1045,17 +1074,14 @@ export default function App() {
                   </span>
                 </div>
               </div>
-              <div className="buddy-board">
-                <span className="buddy-label">YOUR NEXT CO-DRIVER</span>
-                <Buddy />
-                <div>
-                  <strong>미래에서 온 주차 초보.</strong>
-                  <p>아직 면허 연습 중. 실험 모델의 실패와 도전을 지켜봐요.</p>
-                </div>
-                <span className="board-corner">
-                  LEARNED POLICY / EXPERIMENTAL ↗
-                </span>
-              </div>
+              <Suspense fallback={<div className="mascot-showcase mascot-placeholder">미스터팍을 준비하고 있어요.</div>}><MascotShowcase motionOff={reduceMotion || motionPaused} /></Suspense>
+            </section>
+            <Suspense fallback={null}><SensorLab /></Suspense>
+            <section className="end-drive" aria-labelledby="end-drive-title">
+              <span className="eyebrow">YOUR NEXT MOVE STARTS HERE</span>
+              <h2 id="end-drive-title"><RevealText>한 칸의 가능성.<br /><em>이번엔 당신 차례.</em></RevealText></h2>
+              <a className="button orange" href="#garage">내 주차장으로 돌아가기 <ArrowUpRight size={22} /></a>
+              <span className="end-watermark" aria-hidden="true">PARK.</span>
             </section>
             <footer className="site-footer">
               <Logo />
@@ -1065,6 +1091,7 @@ export default function App() {
                 <br />
                 동의하지 않은 주행 데이터는 서버에 저장하거나 전송하지 않습니다.
                 {" "}<a href="/data-notice.html" target="_blank" rel="noreferrer">서비스·데이터 안내</a>
+                {" · "}<a href="/credits.html" target="_blank" rel="noreferrer">디자인·에셋 출처</a>
               </p>
               <span>
                 BUILT TO TRY AGAIN.
@@ -1119,7 +1146,7 @@ export default function App() {
               <p>
                 <Flag size={13} />{" "}
                 {mode === "mascot"
-                  ? "미스터팍 · LEARNED LIVE · 센서 관측으로 실제 추론 중"
+                  ? state === "ready" ? "미스터팍 · LEARNED LIVE · 센서 관측으로 실제 추론 중" : "미스터팍 · 탑승 연출과 모델 준비 중"
                   : "표시된 칸에 정차한 뒤 P로 마무리"}
               </p>
               {mode === "mascot" && (
@@ -1136,6 +1163,7 @@ export default function App() {
                     ["top", "탑뷰"],
                     ["rear", "후방 시점"],
                     ["orbit", "자유 시점"],
+                    ["driver", "운전석"],
                   ] as const
                 ).map(([id, label]) => (
                   <button
@@ -1152,8 +1180,9 @@ export default function App() {
                 aria-label="센서 표시"
                 aria-pressed={sensors}
                 onClick={() => setSensors(!sensors)}
+                title="실제로 계산한 거리 광선 켜기/끄기"
               >
-                <Radar size={19} />
+                <Radar size={19} /><span className="control-text">센서</span>
               </button>
               <button
                 className="icon-button"
@@ -1163,7 +1192,15 @@ export default function App() {
               >
                 <Grid2X2 size={18} />
               </button>
+              <button className="monitor-toggle" aria-pressed={monitor === "rear"} onClick={() => setMonitor(monitor === "rear" ? null : "rear")}>후방 카메라</button>
+              <button className="monitor-toggle" aria-pressed={monitor === "mirror"} onClick={() => setMonitor(monitor === "mirror" ? null : "mirror")}>사이드 미러</button>
             </div>
+            {monitor && <aside className="camera-monitor-frame" aria-label={monitor === "rear" ? "후방 카메라 영상" : "사이드 미러 영상"}>
+              <span>{monitor === "rear" ? "REAR CAMERA" : "SIDE MIRROR"} · 3D LIVE</span>
+              <button aria-label="보조 카메라 닫기" onClick={() => setMonitor(null)}><X size={13} /></button>
+              <small>가상 카메라 · 거리 왜곡 있음</small>
+            </aside>}
+            {state === "ready" && mode === "human" && !ended && <DriveWelcome hidden={driving.paused || !!dialog || !!monitor} onSensors={() => setSensors(true)} />}
             <SensorAssist
               onSoundChange={setSensorSound}
               result={driving.result}
@@ -1192,6 +1229,8 @@ export default function App() {
                   ? "드래그하여 둘러보기"
                   : camera === "follow"
                     ? "차량을 따라가는 카메라"
+                    : camera === "driver"
+                      ? "가상 운전석 · 실제 차량의 시야와 다릅니다"
                     : camera === "rear"
                       ? "조향 연장선 · 충돌 미검사 · 실차 카메라 아님"
                       : "전체 환경 보기 · 시점 도움 사용"}
@@ -1201,25 +1240,25 @@ export default function App() {
               <div
                 className={
                   "stage-overlay " +
-                  (state === "loading" ? "entry-overlay" : "")
+                  (state === "loading" ? "entry-overlay" : "") + (boardingAt !== null ? " boarding-overlay" : "")
                 }
               >
                 <section className="notice-panel">
                   <span className="eyebrow">GARAGE CONNECTION</span>
                   <h2>
                     {state === "loading"
-                      ? "시동을 준비하고 있어요."
+                      ? boardingAt !== null ? "미스터팍, 운전 부탁해." : "시동을 준비하고 있어요."
                       : "잠깐, 연결을 확인할까요?"}
                   </h2>
                   <p role={state === "error" ? "alert" : "status"}>
                     {state === "error"
                       ? error
                       : mode === "mascot"
-                        ? "AI 모델을 준비하는 중이에요. 첫 실행은 최대 30초 걸릴 수 있어요."
+                        ? "탑승은 캐릭터 연출이에요. 준비가 끝나면 학습 정책이 주행을 시작해요. 첫 모델 로딩은 최대 30초 걸릴 수 있어요."
                         : "실행 리소스를 확인하는 중입니다."}
                   </p>
                   {state === "error" && (
-                    <button className="button orange" onClick={start}>
+                    <button className="button orange" onClick={() => void start()}>
                       다시 시도 <RotateCcw size={17} />
                     </button>
                   )}
@@ -1286,7 +1325,7 @@ export default function App() {
                     {ended === "success"
                       ? "주차 완료! 같은 공간에서 한 번 더 해볼까요?"
                       : ended === "collision"
-                        ? "차체가 장애물 또는 경계에 닿았어요. 다음 시도는 다르게."
+                        ? leftDrivingArea ? "차체가 바깥 연석의 안쪽 경계를 넘었어요. 연석 안에서 다시 도전해보세요." : "차체가 장애물에 닿았어요. 다음 시도는 다르게."
                         : ended === "timeout"
                           ? "90초가 지났어요. 같은 환경에서 다시 도전할 수 있어요."
                           : "여기까지의 시도를 확인하고, 다시 도전해보세요."}
@@ -1306,7 +1345,7 @@ export default function App() {
                         {ended === "success"
                           ? "성공"
                           : ended === "collision"
-                            ? "충돌"
+                            ? leftDrivingArea ? "주행 경계 이탈" : "장애물 충돌"
                             : ended === "timeout"
                               ? "시간 종료"
                               : "직접 종료"}
@@ -1335,7 +1374,7 @@ export default function App() {
                     </div>
                   </dl>
                   <div className="result-actions">
-                    <button className="button orange" onClick={start}>
+                    <button className="button orange" onClick={() => void start()}>
                       같은 공간 다시 도전 <RotateCcw size={17} />
                     </button>
                     <button className="button secondary" onClick={leave}>
@@ -1356,7 +1395,14 @@ export default function App() {
               </div>
             )}
           </section>
-          <section id="cockpit" className="cockpit" aria-label="운전 조작">
+          <section id="cockpit" className={`cockpit${cockpitFolded ? " cockpit-folded" : ""}`} aria-label="운전 조작">
+            <button className="cockpit-toggle" aria-expanded={!cockpitFolded} aria-controls="cockpit" onClick={() => {
+              driving.clearInputs(); wheelDrag.current = null; setCockpitFolded(!cockpitFolded);
+            }}>
+              {cockpitFolded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {cockpitFolded ? "조작판 펼치기" : "조작판 접기"}
+            </button>
+            {cockpitFolded && <div className="compact-gear" aria-label={`현재 기어 ${driving.gear}`}>{driving.gear}<span>↑ ↓ ← → 운전 · E / Q 변속</span></div>}
             <div className="telemetry">
               <div className="speedometer">
                 <span className="eyebrow">SPEED</span>
@@ -1551,6 +1597,8 @@ export default function App() {
           </section>
         </main>
       )}
+      {recordPromptFor && <RecordChoice collection={collection} local={recordLocally}
+        settings={recordPromptFor === "settings"} onConfirm={confirmRecords} onCancel={() => setRecordPromptFor(null)} />}
       <dialog
         ref={modal}
         aria-labelledby="dialog-title"
