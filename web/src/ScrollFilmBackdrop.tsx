@@ -16,7 +16,7 @@ export default function ScrollFilmBackdrop({ motionOff }: { motionOff: boolean }
     };
     const seek = () => {
       frame = 0;
-      if (motionOff || failed || !visible || document.hidden || video.seeking || !Number.isFinite(video.duration)) return;
+      if (motionOff || failed || !visible || document.hidden || video.seeking || video.readyState < 2 || !Number.isFinite(video.duration)) return;
       const desired = target * Math.max(0,video.duration - .08), distance = desired - video.currentTime;
       if (Math.abs(distance) < .045) return;
       // 키프레임 간격이 짧은 MP4. 한 번에 하나만 seek하고 최신 스크롤 위치로 합친다.
@@ -48,18 +48,18 @@ export default function ScrollFilmBackdrop({ motionOff }: { motionOff: boolean }
     const resize = new ResizeObserver(scroll); resize.observe(document.body);
     window.addEventListener("scroll",scroll,{passive:true}); window.addEventListener("resize",scroll);
     document.addEventListener("visibilitychange",scroll); document.addEventListener("click",click,true);
-    video.addEventListener("loadedmetadata",schedule); video.addEventListener("seeked",schedule);
+    video.addEventListener("loadeddata",schedule); video.addEventListener("canplay",schedule); video.addEventListener("progress",schedule); video.addEventListener("seeked",schedule);
     node.dataset.motion = motionOff ? "paused" : "running"; clearReaction(); scroll();
     return () => {
       cancelAnimationFrame(frame); clearReaction(); resize.disconnect();
       window.removeEventListener("scroll",scroll); window.removeEventListener("resize",scroll);
       document.removeEventListener("visibilitychange",scroll); document.removeEventListener("click",click,true);
-      video.removeEventListener("loadedmetadata",schedule); video.removeEventListener("seeked",schedule);
+      video.removeEventListener("loadeddata",schedule); video.removeEventListener("canplay",schedule); video.removeEventListener("progress",schedule); video.removeEventListener("seeked",schedule);
     };
   }, [motionOff,failed]);
   return <div ref={host} className="continuous-backdrop" data-kind="scroll-brand-film" data-ready={ready && !failed} aria-hidden="true">
     <img src="/art/mrpark-concept.png" alt="" />
-    <video ref={film} src={load && !failed ? "/art/parking-scroll-film.mp4" : undefined} muted playsInline preload="metadata"
+    <video ref={film} src={load && !failed ? "/art/parking-scroll-film.mp4" : undefined} muted playsInline preload="auto"
       onLoadedData={() => setReady(true)} onError={() => setFailed(true)} />
     <div className="film-scrim" />
   </div>;
