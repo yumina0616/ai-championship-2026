@@ -1,5 +1,5 @@
 export { ParkingEngine, FIXED_DT_S } from "./engine.js";
-export { integrateBicycleModel, normalizeAngle, clampCommand } from "./vehicle.js";
+export { integrateBicycleModel, normalizeAngle, clampCommand, DEFAULT_MAX_ACCEL_MPS2 } from "./vehicle.js";
 export {
   vehicleFootprint,
   obbOverlap,
