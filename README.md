@@ -80,7 +80,7 @@ python3 scripts/check_docs.py
 python3 -m unittest discover -s tests -v
 ```
 
-서비스 주소: [Mr.Park 미스터팍](https://mrpark.ai.kr). 도메인 전파 중에는 [기존 공개 주소](https://parkside-parking.jinhyeong9568-663.workers.dev)도 사용할 수 있습니다. 새 방문자는 첫 운전 전에 기록 방식을 선택하며 학습용 전송은 기본 OFF입니다. 주소가 달라지면 브라우저 기록·동의·삭제 영수증은 자동 이전되지 않습니다. 배포 설정·검증·남은 점은 [Cloudflare 배포 안내](docs/cloudflare-deployment.md)를 따릅니다. CI artifact 제공과 공개 배포는 별개입니다.
+서비스 주소: [Mr.Park 미스터팍](https://mrpark.ai.kr). [기존 공개 주소](https://parkside-parking.jinhyeong9568-663.workers.dev)도 사용할 수 있습니다. 새 방문자는 첫 운전 전에 기록 방식을 선택하며 학습용 전송은 기본 OFF입니다. 주소가 달라지면 브라우저 기록·동의·삭제 영수증은 자동 이전되지 않습니다. main 변경은 CI 통과 후 Cloudflare에 자동 배포하며, PR은 검증만 수행합니다. 최초 Secret 등록·배포 결과 확인·복구는 [Cloudflare 배포 안내](docs/cloudflare-deployment.md)를 따릅니다. artifact 생성과 운영 배포 완료는 구분합니다.
 
 | 담당 | 지금 할 일 | 다음 연결 |
 | --- | --- | --- |

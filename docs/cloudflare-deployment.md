@@ -24,7 +24,26 @@
 - 앱 요청 로그는 `observability.enabled=false`. 공급자 내부 보안/접속 로그까지 없다는 의미는 아니다.
 - `/data-notice.html`에 실제 동작과 플랫폼 접속 처리, 시뮬레이션 한계를 안내한다.
 
-## 재배포
+## GitHub main 자동 배포
+
+`.github/workflows/web.yml`의 `운영 자동 배포` job이 운영 배포를 담당한다. 최초 활성화에는 아래 Secret 등록과 workflow의 main 병합이 모두 필요하다.
+
+1. PR은 기존 검증만 실행하며 운영에 배포하지 않는다.
+2. main push 또는 main을 선택한 수동 실행에서 엔진·웹 3개 shard·프로덕션 artifact·학습·API 검사가 모두 성공해야 배포 job을 시작한다. 같은 커밋의 문서 검사와 Python 테스트도 배포 전에 다시 실행한다.
+3. 같은 workflow에서 검사한 `parking-web-preview` artifact를 내려받고 `wrangler@4.132.0 deploy`로 웹과 Worker를 함께 배포한다. 별도 재빌드를 하지 않는다.
+4. 배포 직전에 최신 main SHA를 확인한다. 이미 더 최신 main이 있으면 오래된 실행의 배포는 건너뛴다. main 실행은 직렬화하고 배포 중 새 push로 취소하지 않는다.
+5. 공개 홈페이지 HTML과 artifact 일치, `/api/health`의 `storage: ready`를 확인한다. 사용자 기록을 조회하거나 업로드하지 않는다.
+
+### 배포 인증과 운영
+
+- GitHub 저장소 **Settings → Secrets and variables → Actions**에 `CLOUDFLARE_API_TOKEN`을 등록한다. 토큰은 배포 step의 환경변수로만 주입한다. 코드·PR·로그에 값을 기록하지 않는다.
+- Cloudflare 계정 `663aba20dd087e7242771263ce8b2105`의 Workers Scripts Write·Account Settings Read, `mrpark.ai.kr`의 Workers Routes Write·Zone Read만 부여하는 전용 토큰을 사용한다. R2 관리·결제·계정 토큰 발급 권한은 부여하지 않는다. Worker 배포 권한은 바인딩된 자원에 접근하는 코드를 변경할 수 있으므로 저장소 협업자와 workflow 변경도 신뢰 경계에 포함된다.
+- 토큰 만료 전에 교체한다. 토큰을 폐기하거나 Secret이 누락되면 새 배포는 실패하며 기존 서비스는 자동으로 삭제되지 않는다.
+- GitHub **Actions → 웹·엔진 검증 → 해당 main 실행 → 운영 자동 배포**에서 결과와 Worker version을 확인한다. PR CI 성공만으로 공개 반영됐다고 판단하지 않는다.
+- 재실행은 해당 실행의 실패 job 재실행 또는 **Run workflow → main**을 사용한다. 오래된 커밋이면 최신 main을 새로 실행한다.
+- 배포 전 검사 실패 시 기존 버전을 유지한다. 배포 후 health/HTML 검사 실패는 자동 rollback하지 않으므로 로그와 Cloudflare Deployments를 확인하고 직전 검증 버전으로 수동 복구한다. 긴급 복구 중에는 새 main 배포도 중지해 재덮어쓰기를 막는다.
+
+## 수동 재배포·복구
 
 저장소 루트, Node.js 22.12 이상. 공식 CLI의 기존 OAuth 로그인을 사용하며 토큰을 코드에 넣지 않는다.
 
@@ -37,7 +56,7 @@ npx --yes wrangler@4.132.0 deploy --dry-run
 npx --yes wrangler@4.132.0 deploy
 ```
 
-GitHub 자동 배포는 연결하지 않았다. 검증한 로컬 빌드를 직접 배포한다.
+아래는 자동 배포 도입 전 검증한 로컬 빌드를 직접 배포한 이력이다.
 기반 main commit은 `d84bb38`, 작업 브랜치는 `feature/13-cloudflare-data`다. 최초 배포는 커밋 전 로컬 빌드로 수행했으며 이 변경에 배포 설정과 수정 코드를 함께 기록한다.
 최초 Worker version: `10b0e2bb-1750-4468-b87e-8aa721fbd4e0`.
 AI 첫 로딩 수정 반영 version: `a0807025-a092-4a60-81c7-b6cf9b32abe1`.
