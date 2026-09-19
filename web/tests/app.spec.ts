@@ -71,9 +71,11 @@ test("기어 단축키·시점 유지와 수동 후방 선택·드래그 조향�
     page.getByRole("button", { name: "차량 추적", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   // #17: 맵 경계도 센서로 감지하게 되면서(engine/src/sensor.ts) 중심 원시 최소값이 옆쪽 경계처럼
-  // 전진만으로는 잘 안 바뀌는 값에 붙들릴 수 있다 — 값이 실제로 갱신될 시간을 명시적으로 준다.
-  await page.waitForTimeout(500);
-  await expect(page.getByTestId("raw-range")).not.toHaveText(before);
+  // 전진만으로는 잘 안 바뀌는 값에 붙들릴 수 있다 — 고정 시간을 기다리는 대신(차를 필요 이상
+  // 가속시켜 뒤 브레이크 검사를 깨뜨렸던 적이 있음) 값이 바뀔 때까지만 폴링한다.
+  await expect
+    .poll(async () => page.getByTestId("raw-range").innerText())
+    .not.toBe(before);
   await brake(page);
   await page.getByRole("button", { name: "일시정지", exact: true }).click();
   await expect(page.getByLabel("실시간 가상 센서")).toContainText("HOLD");
