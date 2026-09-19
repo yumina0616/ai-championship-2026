@@ -214,17 +214,30 @@ export interface HybridAStarResult {
   expandedNodes: number;
 }
 
+/**
+ * scenario.start(정지 상태) 대신 "이미 주행 중이던 임의의 중간 상태"에서 계획을 시작하고 싶을 때
+ * 쓴다(#17: 정책이 실패한 지점에서부터 Hybrid A*로 복구 경로를 다시 계획하는 용도).
+ * lastAppliedCommand를 함께 넘기는 이유는 clampCommand의 가속/조향각속도 연속성 때문 — 이걸
+ * 0으로 두면 실제로는 이미 움직이던 차량이 갑자기 정지 상태에서 재가속하는 것처럼 계획돼
+ * 재생(replay)과 어긋난다(#9에서 겪은 것과 같은 종류의 버그).
+ */
+export interface StartState {
+  pose: Pose;
+  lastAppliedCommand: Command;
+}
+
 export function planHybridAStar(
   scenario: Scenario,
-  options: Partial<HybridAStarOptions> = {}
+  options: Partial<HybridAStarOptions> = {},
+  startOverride?: StartState
 ): HybridAStarResult {
   const opts = { ...DEFAULT_HYBRID_ASTAR_OPTIONS, ...options };
   const primitiveTemplates = buildPrimitiveTargets(scenario, opts);
   const zeroCommand: Command = { targetSpeedMps: 0, targetSteeringRad: 0 };
 
   const start: SearchNode = {
-    pose: scenario.start,
-    lastAppliedCommand: zeroCommand,
+    pose: startOverride?.pose ?? scenario.start,
+    lastAppliedCommand: startOverride?.lastAppliedCommand ?? zeroCommand,
     gCost: 0,
     parent: null,
     requestedCommandFromParent: null,
@@ -298,12 +311,13 @@ function reconstructPrimitiveTargets(goalNode: SearchNode): Command[] {
 export function flattenPrimitiveTargetsToCommands(
   scenario: Scenario,
   primitiveTargets: Command[],
-  options: Partial<HybridAStarOptions> = {}
+  options: Partial<HybridAStarOptions> = {},
+  startOverride?: StartState
 ): Command[] {
   const opts = { ...DEFAULT_HYBRID_ASTAR_OPTIONS, ...options };
   const commands: Command[] = [];
-  let pose = scenario.start;
-  let applied: Command = { targetSpeedMps: 0, targetSteeringRad: 0 };
+  let pose = startOverride?.pose ?? scenario.start;
+  let applied: Command = startOverride?.lastAppliedCommand ?? { targetSpeedMps: 0, targetSteeringRad: 0 };
 
   for (const target of primitiveTargets) {
     const sim = simulatePrimitive(pose, applied, target, scenario, opts, (step) => commands.push(step));

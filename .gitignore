@@ -19,6 +19,8 @@ data/raw/
 artifacts/
 checkpoints/
 training/data/
+training/.tmp-*.ts
+training/model/candidate-*/
 *.pt
 *.pth
 *.onnx

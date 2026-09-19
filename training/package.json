@@ -9,6 +9,9 @@
     "train": "tsx src/train.ts",
     "evaluate": "tsx src/evaluate.ts",
     "community": "tsx src/community.ts",
+    "recovery-augment": "tsx src/recoveryAugment.ts",
+    "startpose-augment": "tsx src/startPoseAugment.ts",
+    "first-deviation-round": "tsx src/firstDeviationRecovery.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

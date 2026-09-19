@@ -6,6 +6,7 @@ import {
   flattenPrimitiveTargetsToCommands,
   planHybridAStar,
   type HybridAStarOptions,
+  type StartState,
 } from "./hybridAStar.js";
 import type {
   Command,
@@ -113,23 +114,25 @@ export interface HybridAStarRolloutResult {
 /**
  * Hybrid A*로 장애물을 피하는 경로를 먼저 계획한 뒤, 그 command 시퀀스를 engine에 그대로 재생해
  * Episode를 만든다. 계획을 못 찾으면 episode=null을 반환한다(호출자가 로그/스킵 처리).
+ * startOverride를 주면 scenario.start 대신 그 중간 상태에서부터 계획·재생한다(#17 복구 경로 생성).
  */
 export function runHybridAStarRollout(
   scenario: Scenario,
   options: Partial<RolloutOptions> = {},
-  plannerOptions: Partial<HybridAStarOptions> = {}
+  plannerOptions: Partial<HybridAStarOptions> = {},
+  startOverride?: StartState
 ): HybridAStarRolloutResult {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  const plan = planHybridAStar(scenario, plannerOptions);
+  const plan = planHybridAStar(scenario, plannerOptions, startOverride);
   if (!plan.found) {
     return { episode: null, planFound: false, expandedNodes: plan.expandedNodes };
   }
 
-  const plannedTargets = flattenPrimitiveTargetsToCommands(scenario, plan.primitiveTargets, plannerOptions);
+  const plannedTargets = flattenPrimitiveTargetsToCommands(scenario, plan.primitiveTargets, plannerOptions, startOverride);
   const commands = appendHoldCommands(scenario, plannedTargets, plannerOptions).slice(0, opts.maxSteps);
 
   const engine = new ParkingEngine();
-  const observation0 = engine.reset(scenario);
+  const observation0 = engine.reset(scenario, startOverride);
 
   const steps: EpisodeStep[] = [];
   let outcome: Outcome = { terminated: false, reason: null };
