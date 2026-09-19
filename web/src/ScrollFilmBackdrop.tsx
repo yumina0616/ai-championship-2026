@@ -6,6 +6,27 @@ const clamp = (value: number) => Math.max(0, Math.min(1, value));
 export default function ScrollFilmBackdrop({ motionOff }: { motionOff: boolean }) {
   const host = useRef<HTMLDivElement>(null), film = useRef<HTMLVideoElement>(null);
   const [load, setLoad] = useState(false), [ready, setReady] = useState(false), [failed, setFailed] = useState(false);
+  const [source, setSource] = useState<string>();
+  useEffect(() => {
+    if (!load) return;
+    const controller = new AbortController();
+    let objectUrl: string | undefined;
+    // Static Assets는 Range 요청에도 200 전체 파일을 반환한다.
+    // WebKit에서도 앞뒤 탐색이 가능하도록 한 번 내려받은 영상으로 재생한다.
+    void fetch("/art/parking-scroll-film.mp4", { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error("배경 영상을 불러오지 못했어요.");
+        const blob = await response.blob();
+        if (controller.signal.aborted) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSource(objectUrl);
+      })
+      .catch(() => { if (!controller.signal.aborted) setFailed(true); });
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [load]);
   useEffect(() => {
     const node = host.current, video = film.current;
     if (!node || !video) return;
@@ -59,7 +80,7 @@ export default function ScrollFilmBackdrop({ motionOff }: { motionOff: boolean }
   }, [motionOff,failed]);
   return <div ref={host} className="continuous-backdrop" data-kind="scroll-brand-film" data-ready={ready && !failed} aria-hidden="true">
     <img src="/art/mrpark-concept.png" alt="" />
-    <video ref={film} src={load && !failed ? "/art/parking-scroll-film.mp4" : undefined} muted playsInline preload="auto"
+    <video ref={film} src={!failed ? source : undefined} muted playsInline preload="auto"
       onLoadedData={() => setReady(true)} onError={() => setFailed(true)} />
     <div className="film-scrim" />
   </div>;

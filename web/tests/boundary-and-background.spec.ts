@@ -56,6 +56,7 @@ test("하나의 배경이 섹션 사이에서 유지되고 구분선과 입력�
   }
   expect(await page.locator("#garage").evaluate(el => getComputedStyle(el,"::after").height)).toBe("1px");
   await expect(backdrop).toHaveAttribute("data-ready","true");
+  await expect(backdrop.locator("video")).toHaveAttribute("src", /^blob:/);
   await expect.poll(() => backdrop.locator("video").evaluate(el => (el as HTMLVideoElement).currentTime)).toBeGreaterThan(1);
   const lateTime = await backdrop.locator("video").evaluate(el => (el as HTMLVideoElement).currentTime);
   await page.locator("#garage").scrollIntoViewIfNeeded();

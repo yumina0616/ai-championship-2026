@@ -469,7 +469,7 @@ test("실제 경계 충돌은 성공이 아닌 실패 결과로 표시", async (
     timeout: 15000,
   });
   await page.keyboard.up("KeyW");
-  await expect(page.getByText("충돌", { exact: true })).toBeVisible();
+  await expect(page.getByText("주행 경계 이탈", { exact: true })).toBeVisible();
   await expect(page.locator(".result-panel")).toHaveCSS("opacity", "1");
   await page.screenshot({ path: "test-results/result.png" });
 });

@@ -163,6 +163,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [sceneRevision, setSceneRevision] = useState(0);
   const [dialog, setDialog] = useState<"guide" | "about" | null>(null);
+  const [welcomeRevision, setWelcomeRevision] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
@@ -443,6 +444,7 @@ export default function App() {
       return;
     }
     setCockpitFolded(false);
+    setWelcomeRevision(0);
     setMode(selectedMode);
     if (state === "error") setSceneRevision((n) => n + 1);
     setIntroDismissed(true);
@@ -1126,7 +1128,12 @@ export default function App() {
             <button
               className="icon-button"
               aria-label="조작 가이드"
-              onClick={() => setDialog("guide")}
+              onClick={() => {
+                if (mode === "human" && state === "ready" && !driving.paused && !ended && speed <= .4) {
+                  setMonitor(null);
+                  setWelcomeRevision(n => n + 1);
+                } else setDialog("guide");
+              }}
             >
               <CircleHelp size={20} />
             </button>
@@ -1200,7 +1207,7 @@ export default function App() {
               <button aria-label="보조 카메라 닫기" onClick={() => setMonitor(null)}><X size={13} /></button>
               <small>가상 카메라 · 거리 왜곡 있음</small>
             </aside>}
-            {state === "ready" && mode === "human" && !ended && <DriveWelcome hidden={driving.paused || !!dialog || !!monitor} onSensors={() => setSensors(true)} />}
+            {state === "ready" && mode === "human" && !ended && <DriveWelcome key={welcomeRevision} forceShow={welcomeRevision > 0} moving={speed > .4} gear={driving.gear} hidden={driving.paused || !!dialog || !!monitor} onSensors={() => setSensors(true)} />}
             <SensorAssist
               onSoundChange={setSensorSound}
               result={driving.result}

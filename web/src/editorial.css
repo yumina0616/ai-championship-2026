@@ -24,6 +24,58 @@
 
 /* 페이지는 하나의 바탕. 섹션 구분선만 남기고 배경을 끊지 않는다. */
 .cinema.landing { background: #101820; }
+/* 모달도 같은 어두운 표면과 명시적인 글자색을 사용한다. */
+.cinema .dialog-content p { color: #d3dfe7; font-size: 14px; }
+.cinema .dialog-content .dialog-note {
+  background: #101c25; color: #dce8ef; border: 1px solid #405867;
+  border-left: 3px solid #a6cfe3; border-radius: 4px; padding: 16px 18px;
+}
+.cinema .dialog-content > .eyebrow { color: #b8cfdd; }
+.cinema dialog::backdrop { background: #030b14ba; }
+
+/* 짧은 시각 안내. 계기판과 센서 숫자는 애니메이션하지 않는다. */
+.cinema .drive-welcome {
+  top: auto; bottom: 38px; left: 50%; transform: translateX(-50%);
+  width: min(360px,calc(100% - 24px)); padding: 18px 20px;
+  background: #14232ef5; color: #f1f6f9; border: 1px solid #7893a6;
+  border-radius: 12px; box-shadow: 0 16px 48px #0005; animation: welcome-arrive 180ms var(--ease) both;
+}
+.cinema .welcome-top { color: #baceda; }
+.cinema .drive-welcome button { min-height: 36px; padding: 8px 11px; background: #2c4556; color: #f2f7fa; cursor: pointer; }
+.cinema .drive-welcome button:focus-visible { outline: 2px solid #e7f5ff; outline-offset: 3px; }
+.cinema .welcome-actions { margin-top: 16px; }
+.cinema .welcome-actions > span { color: #baceda; }
+.cinema .welcome-actions button:last-child { background: #dcebf3; color: #14232e; }
+.welcome-progress { display: flex; gap: 5px; margin: 12px 0; }
+.welcome-progress i { height: 2px; flex: 1; background: #496271; }
+.welcome-progress i[data-active=true] { background: #b9e4fa; }
+.welcome-step { animation: welcome-step 220ms var(--ease) both; }
+.cinema .drive-welcome strong { margin-top: 12px; font-size: 20px; }
+.cinema .drive-welcome p { color: #d3dfe7; font-size: 13px; line-height: 1.6; margin: 8px 0; }
+.welcome-step > small { display: block; font-size: 11px; line-height: 1.5; color: #b3c8d5; }
+.welcome-demo { display: flex; align-items: center; justify-content: center; gap: 16px; height: 60px; color: #b9e4fa; }
+.welcome-demo kbd { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #8eaec1; border-bottom-width: 3px; border-radius: 8px; font-family: inherit; font-size: 23px; font-weight: 600; background: #223948; color: #f1f7fa; }
+.demo-rays { display: flex; flex-direction: column; gap: 7px; }
+.demo-rays i { display: block; width: 44px; height: 1px; background: #b9e4fa; transform-origin: left; animation: welcome-ray 900ms var(--ease) both; }
+.demo-rays i:first-child { rotate: -14deg; }
+.demo-rays i:last-child { rotate: 14deg; }
+.drive-screen:has(.drive-welcome[data-step="0"]) .gear-selector,
+.drive-screen:has(.drive-welcome[data-step="1"]) button[aria-label="센서 표시"],
+.drive-screen:has(.drive-welcome[data-step="2"]) .monitor-toggle { outline: 2px solid #c1e8fc; outline-offset: 4px; }
+@keyframes welcome-arrive { from { opacity: 0; } to { opacity: 1; } }
+@keyframes welcome-step { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes welcome-ray { from { transform: scaleX(.15); opacity: .3; } to { transform: scaleX(1); opacity: 1; } }
+@media (max-width: 600px) {
+  .cinema .drive-welcome { bottom: 24px; padding: 12px 16px; }
+  .welcome-demo { height: 42px; }
+  .welcome-demo kbd { width: 36px; height: 36px; font-size: 20px; }
+  .cinema .drive-welcome strong { font-size: 17px; }
+  .cinema .welcome-actions { margin-top: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cinema .drive-welcome,.welcome-step,.demo-rays i { animation: none; }
+}
+.motion-paused :is(.drive-welcome,.welcome-step,.demo-rays i) { animation: none; }
 .cinema .continuous-backdrop {
   position: fixed; inset: 0; width: 100%; height: 100dvh; z-index: 0;
   pointer-events: none; overflow: hidden; background: #101820;
