@@ -6,7 +6,7 @@ import {
   footprintFullyInsideGoal,
   footprintOutOfBounds,
 } from "./collision.js";
-import { computeSensorScan } from "./sensor.js";
+import { computeSensorScan, boundsAsSensedObstacle } from "./sensor.js";
 import { computeGoalRelative } from "./goal.js";
 import { createRng } from "./rng.js";
 import {
@@ -111,7 +111,7 @@ export class ParkingEngine {
       this.cachedSensorScan = computeSensorScan(
         this.pose,
         scenario.sensor,
-        scenario.obstacles,
+        [...scenario.obstacles, boundsAsSensedObstacle(scenario.bounds)],
         this.simTimeS,
         this.rng
       );

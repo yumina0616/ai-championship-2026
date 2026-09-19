@@ -74,7 +74,9 @@ for (const width of [1440, 390]) {
       0,
     );
     await page.getByRole("button", { name: "센서 표시", exact: true }).click();
-    await expect(page.getByTestId("raw-range")).toContainText("4.74");
+    // #17: 맵 경계도 센서로 감지하도록 바뀌면서(engine/src/sensor.ts) 이 시작 자세의 중심 원시
+    // 최소값이 장애물(4.74m)이 아니라 더 가까운 맵 경계(2.35m)로 바뀌었다 — 실제 동작 변화다.
+    await expect(page.getByTestId("raw-range")).toContainText("2.35");
     await page.screenshot({ path: `test-results/smooth-drive-${width}.png` });
     expect(
       await page.evaluate(
