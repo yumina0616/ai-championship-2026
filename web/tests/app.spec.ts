@@ -64,19 +64,23 @@ test("기어 단축키·시점 유지와 수동 후방 선택·드래그 조향�
     .toBe(0);
   await page.getByRole("button", { name: "센서 표시", exact: true }).click();
   await expect(page.getByTestId("raw-range")).toContainText("m");
-  const before = await page.getByTestId("raw-range").innerText();
+  // #17: "raw-range 값이 바뀔 때까지" 기다리는 방식(고정 500ms, 끝없는 폴링, 고정 200ms 전부
+  // 시도함)은 전부 실패했다 — 실제 CI 트레이스로 확인해보니 원인은 브레이크가 아니라, 조향이
+  // 남은 채로 차가 맵 경계를 넘어(주행 경계 이탈) 시뮬레이션 자체가 끝나버려 조작 버튼이
+  // 전부 비활성화된 상태였다(방향 전환 3회·위치오차 8.14m로 대기 시간을 바꿔도 결과가 똑같았던
+  // 게 단서였다 — 문제가 대기 시간이 아니라 그 전 구간에 있었다는 뜻). 차가 "얼마나 움직였는지"
+  // (경계와 부딪힐 위험이 있음)가 아니라 "시뮬레이션 시각이 흐르는지"(sim-time, 물리 스텝마다
+  // 항상 증가하고 이동 거리와 무관함)로 살아있는지 확인하도록 바꿔 그 위험 자체를 없앴다.
+  const simTimeBefore = await page.getByTestId("sim-time").innerText();
   await page.keyboard.press("KeyE");
   await page.keyboard.down("KeyW");
   await expect(
     page.getByRole("button", { name: "차량 추적", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  // #17: "값이 바뀔 때까지" 무기한 기다리면(고정 500ms 대기든, 끝없는 폴링이든) 조향이 남은
-  // 채로 차가 너무 오래 가속해서 맵 경계를 넘어 시뮬레이션이 끝나버리는 걸 실제 CI 트레이스로
-  // 확인했다(브레이크가 안 먹힌 게 아니라 종료돼서 조작 버튼 자체가 비활성화된 상태였음).
-  // 가속 시간을 짧게 고정해 그 위험을 없앴다 — 센서 갱신 주기보다는 충분히 길어 값은 갱신되지만
-  // 경계에 닿을 만큼 길지는 않다.
-  await page.waitForTimeout(200);
-  await expect(page.getByTestId("raw-range")).not.toHaveText(before);
+  await expect
+    .poll(async () => page.getByTestId("sim-time").innerText())
+    .not.toBe(simTimeBefore);
+  await expect(page.getByTestId("raw-range")).toContainText("m");
   await brake(page);
   await page.getByRole("button", { name: "일시정지", exact: true }).click();
   await expect(page.getByLabel("실시간 가상 센서")).toContainText("HOLD");
