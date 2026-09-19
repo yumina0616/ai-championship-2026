@@ -5,6 +5,7 @@ import {
   appendHoldCommands,
   flattenPrimitiveTargetsToCommands,
   planHybridAStar,
+  type StartState,
 } from "../src/hybridAStar.js";
 import { runHybridAStarRollout } from "../src/rollout.js";
 import { loadScenarioFromJson, type ScenarioJson } from "../src/scenarioLoader.js";
@@ -53,10 +54,17 @@ function scenario(overrides: Partial<Scenario> & { obstacles?: RectObstacle[] } 
   };
 }
 
-function replay(target: Scenario, primitiveTargets: ReturnType<typeof planHybridAStar>["primitiveTargets"]) {
-  const commands = appendHoldCommands(target, flattenPrimitiveTargetsToCommands(target, primitiveTargets));
+function replay(
+  target: Scenario,
+  primitiveTargets: ReturnType<typeof planHybridAStar>["primitiveTargets"],
+  startOverride?: StartState
+) {
+  const commands = appendHoldCommands(
+    target,
+    flattenPrimitiveTargetsToCommands(target, primitiveTargets, {}, startOverride)
+  );
   const engine = new ParkingEngine();
-  engine.reset(target);
+  engine.reset(target, startOverride);
   let outcome;
   for (const command of commands) {
     const result = engine.step(command, FIXED_DT_S);
@@ -117,5 +125,17 @@ describe("planHybridAStar", () => {
     expect(rolloutResult.episode).not.toBeNull();
     expect(rolloutResult.episode!.footer.terminationReason).toBe("success");
     expect(rolloutResult.episode!.footer.collided).toBe(false);
+  }, 20000);
+
+  it("startOverride를 주면 scenario.start가 아니라 그 중간 상태에서부터 계획하고, 재생도 성공한다(#17)", () => {
+    // start(x=5)에서 이미 목표 쪽(x=0)으로 움직이던 중이었다고 가정한 중간 상태.
+    const s = scenario();
+    const override: StartState = {
+      pose: { xM: 2, yM: 0.4, yawRad: -0.05 },
+      lastAppliedCommand: { targetSpeedMps: -0.5, targetSteeringRad: 0 },
+    };
+    const result = planHybridAStar(s, {}, override);
+    expect(result.found).toBe(true);
+    expect(replay(s, result.primitiveTargets, override)).toEqual({ terminated: true, reason: "success" });
   }, 20000);
 });

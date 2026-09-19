@@ -35,12 +35,17 @@ export class ParkingEngine {
   private cachedSensorScan: Observation["sensors"] = [];
   private successHoldStartSimTimeS: number | null = null;
 
-  /** 검증된 scenario로 새 episode를 시작한다. 실패 시 값을 반환하지 않고 throw한다. */
-  reset(scenario: Scenario): Observation {
+  /**
+   * 검증된 scenario로 새 episode를 시작한다. 실패 시 값을 반환하지 않고 throw한다.
+   * startOverride를 주면 scenario.start 대신 그 pose/lastAppliedCommand에서 시작한다(#17:
+   * 정책이 실패한 중간 지점에서 Hybrid A*가 계획한 복구 경로를 재생해 관측을 기록하는 용도).
+   */
+  reset(scenario: Scenario, startOverride?: { pose: Pose; lastAppliedCommand: Command }): Observation {
     assertFinite(scenario);
+    const startPose = startOverride?.pose ?? scenario.start;
     if (
-      footprintCollides(scenario.start, scenario.vehicle, scenario.obstacles) ||
-      footprintOutOfBounds(scenario.start, scenario.vehicle, scenario.bounds)
+      footprintCollides(startPose, scenario.vehicle, scenario.obstacles) ||
+      footprintOutOfBounds(startPose, scenario.vehicle, scenario.bounds)
     ) {
       throw new EngineError(
         "start_overlap",
@@ -49,9 +54,9 @@ export class ParkingEngine {
     }
 
     this.scenario = scenario;
-    this.pose = { ...scenario.start };
+    this.pose = { ...startPose };
     this.simTimeS = 0;
-    this.lastAppliedCommand = ZERO_COMMAND;
+    this.lastAppliedCommand = startOverride?.lastAppliedCommand ?? ZERO_COMMAND;
     this.terminated = false;
     this.rng = createRng(scenario.seed ?? 0);
     this.lastSensorUpdateSimTimeS = -Infinity; // 첫 관측은 항상 새로 계산

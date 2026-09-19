@@ -13,14 +13,16 @@ export function buildModel(seed: number): tf.LayersModel {
   model.add(
     tf.layers.dense({
       inputShape: [FEATURE_SIZE],
-      units: 32,
+      // #17 조사(16장): 32->16보다 64->32가 이 데이터 규모에서 더 나은 sweet spot이었다
+      // (더 크게 키우면 오히려 나빠짐 — 무작정 용량을 늘리는 게 능사는 아니다).
+      units: 64,
       activation: "relu",
       kernelInitializer: tf.initializers.glorotUniform({ seed }),
     })
   );
   model.add(
     tf.layers.dense({
-      units: 16,
+      units: 32,
       activation: "relu",
       kernelInitializer: tf.initializers.glorotUniform({ seed: seed + 1 }),
     })
