@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { computeSensorScan } from "../src/sensor.js";
+import { boundsAsSensedObstacle, computeSensorScan } from "../src/sensor.js";
 import { createRng } from "../src/rng.js";
-import type { Pose, RectObstacle, SensorSpec } from "../src/types.js";
+import type { Pose, RectObstacle, SensorSpec, WorldBounds } from "../src/types.js";
 
 const ORIGIN: Pose = { xM: 0, yM: 0, yawRad: 0 };
 
@@ -93,5 +93,34 @@ describe("computeSensorScan", () => {
     // ray index 18의 각도는 angleMin(-pi) + 18*inc(pi/18) = 0 → 정면.
     expect(readings[18]!.angleRad).toBeCloseTo(0, 9);
     expect(readings[18]!.rangeM).toBeCloseTo(5.1, 6);
+  });
+});
+
+describe("boundsAsSensedObstacle — 맵 경계도 센서로 감지(#17)", () => {
+  const BOUNDS: WorldBounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 };
+
+  it("장애물이 하나도 없어도, 맵 끝까지의 거리를 감지한다(예전엔 항상 미검출=max_range였음)", () => {
+    const readings = computeSensorScan(ORIGIN, forwardSensor(), [boundsAsSensedObstacle(BOUNDS)], 0, createRng(0));
+    // 센서 mount가 (1.3,0)에 있으므로 경계(x=5)까지 남은 거리는 5-1.3=3.7.
+    expect(readings[0]!.rangeM).toBeCloseTo(3.7, 6);
+    expect(readings[0]!.valid).toBe(true);
+  });
+
+  it("경계보다 가까운 실제 장애물이 있으면 그 장애물까지의 거리를 우선한다", () => {
+    const readings = computeSensorScan(
+      ORIGIN,
+      forwardSensor(),
+      [wall(3.0), boundsAsSensedObstacle(BOUNDS)],
+      0,
+      createRng(0)
+    );
+    expect(readings[0]!.rangeM).toBeCloseTo(3.0 - 0.1 - 1.3, 6);
+  });
+
+  it("차량이 경계 쪽으로 이동하면 감지 거리가 그만큼 줄어든다", () => {
+    const before = computeSensorScan(ORIGIN, forwardSensor(), [boundsAsSensedObstacle(BOUNDS)], 0, createRng(0));
+    const moved: Pose = { xM: 2, yM: 0, yawRad: 0 };
+    const after = computeSensorScan(moved, forwardSensor(), [boundsAsSensedObstacle(BOUNDS)], 0.05, createRng(0));
+    expect(before[0]!.rangeM - after[0]!.rangeM).toBeCloseTo(2, 6);
   });
 });

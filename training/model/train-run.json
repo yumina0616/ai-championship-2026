@@ -12,36 +12,36 @@
   "shuffle": "사전 셔플 1회(seed 기반), epoch별 재셔플 없음",
   "trainSamples": 61397,
   "validationSamples": 39030,
-  "finalTrainLoss": 0.0002653889060993283,
+  "finalTrainLoss": 0.0002184861560203848,
   "finalValidationLoss": null,
   "checkpointSelection": {
     "method": "매 20epoch마다 parkside-open/neighbors/pillar를 canonical 시작 위치에서 실제로 굴려(runLearnedEpisode), 성공 개수>충돌없음>오차 순으로 가장 좋은 체크포인트를 저장 — #17 시도 19",
-    "bestEpoch": 300,
+    "bestEpoch": 240,
     "bestScore": [
-      2,
-      -1,
-      -3.8900361341883296
+      3,
+      0,
+      -0.37176275135085485
     ],
     "bestCheckpointResult": [
       {
         "scenarioId": "parkside-open-v1",
         "reason": "success",
-        "position": 0.06461813325181913,
-        "yaw": 0.04456041684092504
+        "position": 0.2899670973525069,
+        "yaw": 0.05902277715231996
       },
       {
         "scenarioId": "parkside-neighbors-v1",
         "reason": "success",
-        "position": 0.4191481728794755,
-        "yaw": 0.020583532297355323
+        "position": 0.18397672168651302,
+        "yaw": 0.013841304786305741
       },
       {
         "scenarioId": "parkside-pillar-v1",
-        "reason": "collision",
-        "position": 7.971968515036539,
-        "yaw": 1.5420428415602974
+        "reason": "success",
+        "position": 0.4861908115571823,
+        "yaw": 0.004712729789555503
       }
     ]
   },
-  "trainedAt": "2026-09-19T09:24:23.043Z"
+  "trainedAt": "2026-09-19T10:58:33.228Z"
 }

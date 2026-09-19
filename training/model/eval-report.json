@@ -1,21 +1,21 @@
 {
-  "evaluatedAt": "2026-09-19T09:24:47.827Z",
-  "codeCommit": "20c019bf0f38934c753a5093c4072c9db13c944b",
+  "evaluatedAt": "2026-09-19T10:59:07.763Z",
+  "codeCommit": "c943ef29e795e7494944bc4c11161642bd20ba14",
   "heldoutScenarioCount": 1,
   "successRate": 0,
-  "collisionRate": 0,
-  "timeoutRate": 1,
+  "collisionRate": 1,
+  "timeoutRate": 0,
   "perScenario": [
     {
       "scenarioId": "synthetic-reverse-bay",
-      "terminationReason": "timeout",
+      "terminationReason": "collision",
       "success": false,
-      "collided": false,
-      "timedOut": true,
-      "stepCount": 1801,
-      "finalPositionErrorM": 5.752423632903844,
-      "finalYawErrorRad": 0.03532582823017716,
-      "totalSimTimeS": 90.04999999999703
+      "collided": true,
+      "timedOut": false,
+      "stepCount": 791,
+      "finalPositionErrorM": 6.862638726664893,
+      "finalYawErrorRad": 0.7178353719609252,
+      "totalSimTimeS": 39.54999999999989
     }
   ],
   "limitations": [

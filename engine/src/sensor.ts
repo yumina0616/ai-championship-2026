@@ -1,7 +1,27 @@
 // 거리 센서(ray-box 교차) 계산. docs/contracts.md "센서별 pose·방향·range·갱신 시각·valid flag"
 // 와 "물체 미검출과 센서 결측을 구분한다. 결측을 0m로 대체하지 않는다"를 그대로 구현한다.
 import { nextGaussian } from "./rng.js";
-import type { Pose, RangeReading, RectObstacle, SensorSpec } from "./types.js";
+import type { Pose, RangeReading, RectObstacle, SensorSpec, WorldBounds } from "./types.js";
+
+/**
+ * #17 조사: 실제 주차장 경계(연석/벽)는 3D 화면엔 보이지만 센서 계산엔 전혀 안 들어가 있었다
+ * — 정책 입력에 맵 끝에 대한 정보가 아예 없어서, 장애물 없는 빈 공간에서도 맵 밖으로 그냥
+ * 나가버리는 사례를 실제로 확인했다(충돌 판정 자체는 항상 있었지만 감지는 못 했음). bounds를
+ * "센서에만 보이는" 하나의 거대한 사각형으로 표현해 기존 ray-box 교차 로직을 그대로 재사용한다
+ * — 차량은 항상 이 사각형 내부에서 시작하므로 rayObstacleDistance가 자동으로 "탈출 지점까지의
+ * 거리"(장애물의 tMax)를 반환한다. 충돌 판정(footprintCollides/footprintOutOfBounds)에는 이
+ * 가상 obstacle을 넣지 않는다 — 센서 관측에만 쓴다.
+ */
+export function boundsAsSensedObstacle(bounds: WorldBounds): RectObstacle {
+  return {
+    id: "world-bounds",
+    centerXM: (bounds.minX + bounds.maxX) / 2,
+    centerYM: (bounds.minY + bounds.maxY) / 2,
+    lengthM: bounds.maxX - bounds.minX,
+    widthM: bounds.maxY - bounds.minY,
+    yawRad: 0,
+  };
+}
 
 function rotate(x: number, y: number, yawRad: number): [number, number] {
   const cos = Math.cos(yawRad);
