@@ -31,4 +31,5 @@ export {
   DEFAULT_HYBRID_ASTAR_OPTIONS,
   type HybridAStarOptions,
   type HybridAStarResult,
+  type StartState,
 } from "./hybridAStar.js";

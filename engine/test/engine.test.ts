@@ -184,3 +184,33 @@ describe("ParkingEngine — examples/scenarios fixture(#3) 그대로 실행", ()
     }
   });
 });
+
+describe("ParkingEngine — startOverride (#17 정책 실패 지점에서 복구 경로 재생)", () => {
+  it("scenario.start 대신 override pose/lastAppliedCommand로 시작하고, 이미 움직이던 속도 기준으로 가감속을 이어간다", () => {
+    const s = straightScenario();
+    const engine = new ParkingEngine();
+    const observation0 = engine.reset(s, {
+      pose: { xM: 2, yM: 0, yawRad: 0 },
+      lastAppliedCommand: { targetSpeedMps: 0.8, targetSteeringRad: 0 },
+    });
+    // scenario.start(x=0)가 아니라 override pose(x=2) 기준 관측이어야 한다.
+    expect(observation0.speedMps).toBe(0.8);
+    // wall(6.5)까지 원래 5.1m가 아니라 override pose(x=2) 기준으로 더 가깝다.
+    expect(observation0.sensors[0]!.rangeM).toBeLessThan(5.1);
+
+    const result = engine.step({ targetSpeedMps: 0, targetSteeringRad: 0 }, FIXED_DT_S);
+    // lastAppliedCommand=0.8에서 감속(maxAccel=2.0*dt=0.1)했다면 0.7 — 0(정지)에서 시작했다면 0이 된다.
+    expect(result.appliedCommand.targetSpeedMps).toBeCloseTo(0.7, 6);
+  });
+
+  it("override pose가 장애물과 겹치면 scenario.start와 무관하게 start_overlap을 던진다", () => {
+    const s = straightScenario(); // scenario.start(x=0)는 그 자체로는 겹치지 않는다.
+    const engine = new ParkingEngine();
+    expect(() =>
+      engine.reset(s, {
+        pose: { xM: 6.5, yM: 0, yawRad: 0 }, // wall과 같은 위치
+        lastAppliedCommand: { targetSpeedMps: 0, targetSteeringRad: 0 },
+      })
+    ).toThrow(EngineError);
+  });
+});
