@@ -17,7 +17,10 @@ import {
   Environment,
   Lightformer,
 } from "@react-three/drei";
-import { Vector3, Shape, DataTexture, RGBAFormat, RepeatWrapping } from "three";
+import { Vector3, DataTexture, RGBAFormat, RepeatWrapping, PerspectiveCamera } from "three";
+import { Coachwork, MrParkRobot } from "./DesignObjects";
+import { AssetFallback, CarAssetBoundary, DetailedCar, type VehicleAssetState } from "./DetailedCar";
+import CameraMonitor, { type MonitorMode } from "./CameraMonitor";
 import type { OrbitControls as OrbitControlsType } from "three-stdlib";
 import type { TemplateId } from "./preview";
 import type { Scenario } from "../../engine/src/index";
@@ -30,10 +33,13 @@ import {
 import type { StepResult } from "../../engine/src/index";
 import { storyCamera, FILM_SECONDS } from "./story";
 import { sampleMotion, type MotionFrame } from "./motion";
-import { buildOpening, OPENING_RATE } from "./opening";
+import { buildOpening, OPENING_DURATION_S, openingShot } from "./opening";
+import OpeningTelemetry from "./OpeningTelemetry";
+import BoardingRobot from "./BoardingRobot";
+import { boundaryCurbs } from "./scene-boundary";
 import { FIXED_DT_S } from "../../engine/src/index";
 
-export type CameraMode = "orbit" | "follow" | "top" | "rear";
+export type CameraMode = "orbit" | "follow" | "top" | "rear" | "driver";
 type Position = [number, number, number];
 function Box({
   position,
@@ -64,26 +70,7 @@ function Box({
     </mesh>
   );
 }
-// 직접 작성한 곡선 프로파일. 외형은 개발용 차량 footprint 4.4 × 1.8m에 맞춥니다.
-const bodyProfile = new Shape();
-bodyProfile.moveTo(-2.13, 0.34);
-bodyProfile.quadraticCurveTo(-2.2, 0.38, -2.2, 0.58);
-bodyProfile.lineTo(-2.12, 0.82);
-bodyProfile.quadraticCurveTo(-1.8, 0.94, -1.25, 0.92);
-bodyProfile.lineTo(0.8, 0.88);
-bodyProfile.quadraticCurveTo(1.85, 0.82, 2.15, 0.66);
-bodyProfile.quadraticCurveTo(2.2, 0.48, 2.12, 0.34);
-bodyProfile.closePath();
-const glassProfile = new Shape();
-glassProfile.moveTo(-1.6, 0.86);
-glassProfile.lineTo(-1.13, 1.38);
-glassProfile.quadraticCurveTo(-0.93, 1.51, -0.68, 1.51);
-glassProfile.lineTo(0.38, 1.49);
-glassProfile.quadraticCurveTo(0.57, 1.47, 0.7, 1.3);
-glassProfile.lineTo(1.08, 0.88);
-glassProfile.closePath();
-
-const Car = memo(function Car({
+export const Car = memo(function Car({
   position,
   color = "#9ea6e0",
   rotation = 0,
@@ -135,61 +122,7 @@ const Car = memo(function Car({
   });
   return (
     <group ref={body} position={position} rotation={[0, rotation, 0]}>
-      <mesh
-        position={[0.805, 0, 0]}
-        rotation={[0, -Math.PI / 2, 0]}
-        castShadow
-        receiveShadow
-      >
-        <extrudeGeometry
-          args={[
-            bodyProfile,
-            {
-              depth: 1.61,
-              bevelEnabled: true,
-              bevelSegments: 3,
-              steps: 1,
-              bevelSize: 0.045,
-              bevelThickness: 0.045,
-              curveSegments: 8,
-            },
-          ]}
-        />
-        <meshPhysicalMaterial
-          color={color}
-          roughness={0.22}
-          metalness={0.6}
-          clearcoat={1}
-          clearcoatRoughness={0.18}
-        />
-      </mesh>
-      <mesh position={[0.7, 0, 0]} rotation={[0, -Math.PI / 2, 0]} castShadow>
-        <extrudeGeometry
-          args={[
-            glassProfile,
-            {
-              depth: 1.4,
-              bevelEnabled: true,
-              bevelSegments: 2,
-              bevelSize: 0.03,
-              bevelThickness: 0.03,
-              curveSegments: 8,
-            },
-          ]}
-        />
-        <meshPhysicalMaterial
-          color="#17242c"
-          metalness={0.45}
-          roughness={0.22}
-          clearcoat={1}
-        />
-      </mesh>
-      <Box
-        position={[0, 1.495, -0.22]}
-        size={[1.3, 0.025, 1.1]}
-        color={color}
-        rounded
-      />
+      <Coachwork color={color} />
       <Box
         position={[0, 0.3, 0]}
         size={[1.53, 0.13, 3.7]}
@@ -212,8 +145,8 @@ const Car = memo(function Car({
           {[-0.65, 0.55].map((z) => (
             <Box
               key={z}
-              position={[side * 0.839, 0.84, z]}
-              size={[0.025, 0.035, 0.21]}
+              position={[side * 0.889, 0.84, z]}
+              size={[0.018, 0.025, 0.21]}
               color="#d8e2db"
             />
           ))}
@@ -235,26 +168,26 @@ const Car = memo(function Car({
               }}
             >
               <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-                <cylinderGeometry args={[0.34, 0.34, 0.24, 24]} />
+                <cylinderGeometry args={[0.34, 0.34, 0.24, 40]} />
                 <meshStandardMaterial color="#172329" roughness={0.9} />
               </mesh>
               <mesh
                 position={[x > 0 ? 0.127 : -0.127, 0, 0]}
                 rotation={[0, 0, Math.PI / 2]}
               >
-                <cylinderGeometry args={[0.23, 0.23, 0.015, 20]} />
+                <cylinderGeometry args={[0.255, 0.255, 0.015, 40]} />
                 <meshStandardMaterial
-                  color="#ccd7dd"
-                  metalness={0.7}
-                  roughness={0.22}
+                  color="#596369"
+                  metalness={0.9}
+                  roughness={0.2}
                 />
               </mesh>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <group key={i} rotation={[(i * Math.PI * 2) / 5, 0, 0]}>
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+                <group key={i} rotation={[(i * Math.PI * 2) / 10, 0, 0]}>
                   <Box
                     position={[x > 0 ? 0.14 : -0.14, 0.11, 0]}
-                    size={[0.013, 0.17, 0.045]}
-                    color="#34414a"
+                    size={[0.018, 0.22, 0.028]}
+                    color="#c5cbcb"
                   />
                 </group>
               ))}
@@ -364,14 +297,17 @@ function OpeningPlayback({
   motion,
   paused,
   onDone,
+  onShot,
 }: {
   frames: StepResult[];
   motion: RefObject<MotionFrame>;
   paused: boolean;
   onDone: () => void;
+  onShot: (shot: number) => void;
 }) {
   const elapsed = useRef(0);
   const finished = useRef(false);
+  const reported = useRef(-1);
   const { invalidate } = useThree();
   useEffect(() => {
     invalidate();
@@ -386,8 +322,12 @@ function OpeningPlayback({
       onDone();
       return;
     }
+    // 로딩/탭 복귀의 긴 첫 프레임을 재생 시간으로 소비하지 않는다.
     elapsed.current += Math.min(dt, 0.1);
-    const time = Math.max(0, elapsed.current - 0.9) * OPENING_RATE;
+    const rate = frames.at(-1)!.simTimeS / OPENING_DURATION_S;
+    const time = elapsed.current * rate;
+    const shot = openingShot(elapsed.current / OPENING_DURATION_S);
+    if (shot !== reported.current) { reported.current = shot; onShot(shot); }
     const index = Math.min(frames.length - 1, Math.floor(time / FIXED_DT_S));
     motion.current = {
       previous: frames[Math.max(0, index - 1)],
@@ -395,9 +335,9 @@ function OpeningPlayback({
       atMs: performance.now(),
       remainderS: time % FIXED_DT_S,
       running: true,
-      rate: OPENING_RATE,
+      rate,
     };
-    if (time > frames.at(-1)!.simTimeS + 0.8) {
+    if (elapsed.current >= OPENING_DURATION_S) {
       motion.current.running = false;
       finished.current = true;
       onDone();
@@ -413,6 +353,7 @@ function CameraRig({
   onStoryProgress,
   motion,
   opening,
+  introShot,
 }: {
   mode: CameraMode;
   result: StepResult | null;
@@ -421,6 +362,7 @@ function CameraRig({
   onStoryProgress: (progress: number) => void;
   motion: RefObject<MotionFrame>;
   opening: boolean;
+  introShot: number;
 }) {
   const { camera, invalidate, size } = useThree();
   const controls = useRef<OrbitControlsType>(null);
@@ -471,13 +413,19 @@ function CameraRig({
       if (visual) {
         const center = carTransform(visual.pose).position;
         const fit = size.width / size.height < 1.15 ? 1.5 : 1;
-        const angle = 0.7 + Math.min(visual.time / 8, 1) * 0.7;
-        wanted.current.set(
-          center[0] + Math.cos(angle) * 9 * fit,
-          4.2 * fit,
-          center[2] + Math.sin(angle) * 9 * fit,
-        );
-        target.current.set(center[0], 0.35, center[2]);
+        const drift = Math.sin(visual.time * .65) * .8;
+        const shot = [[3.4 + drift, 1.25, 2.8], [-3.4, 3.2, 4.5 + drift], [.3 + drift, 13, 1], [5.5 + drift, 3.3, 7]][introShot];
+        wanted.current.set(center[0] + shot[0] * fit, shot[1] * fit, center[2] + shot[2] * fit);
+        target.current.set(center[0], .55, center[2]);
+        moving.current = true;
+      }
+    } else if (mode === "driver") {
+      const pose = sampleMotion(motion.current, performance.now())?.pose ?? result?.poseTruth;
+      if (pose) {
+        const center = carTransform(pose).position;
+        wanted.current.set(center[0] + Math.cos(pose.yawRad) * .15 + Math.sin(pose.yawRad) * .3,
+          1.04, center[2] - Math.sin(pose.yawRad) * .15 + Math.cos(pose.yawRad) * .3);
+        target.current.set(center[0] + Math.cos(pose.yawRad) * 14, 1.04, center[2] - Math.sin(pose.yawRad) * 14);
         moving.current = true;
       }
     } else if (mode === "follow" || mode === "rear") {
@@ -504,9 +452,15 @@ function CameraRig({
     if (!moving.current) return;
     const alpha = reducedMotion
       ? 1
-      : 1 - Math.exp(-Math.min(dt, 0.1) * (driving ? 2.4 : 5));
+      : 1 - Math.exp(-Math.min(dt, 0.1) * (opening ? 11 : mode === "driver" ? 12 : driving ? 2.4 : 5));
     camera.position.lerp(wanted.current, alpha);
-    if (controls.current) {
+    if (camera instanceof PerspectiveCamera) {
+      const fov = mode === "driver" ? 65 : 40;
+      if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    }
+    if (mode === "driver") {
+      camera.lookAt(target.current);
+    } else if (controls.current) {
       controls.current.target.lerp(target.current, alpha);
       controls.current.update();
     } else camera.lookAt(target.current);
@@ -545,6 +499,12 @@ function World({
   brake,
   reverse,
   motion,
+  animated,
+  opening,
+  quality,
+  boardingAt,
+  mascotDriver,
+  onAssetReady,
 }: {
   template: TemplateId;
   customScenario?: Scenario;
@@ -555,6 +515,12 @@ function World({
   brake: boolean;
   reverse: boolean;
   motion: RefObject<MotionFrame>;
+  animated: boolean;
+  opening: boolean;
+  quality: "high" | "low";
+  boardingAt: number | null;
+  mascotDriver: boolean;
+  onAssetReady: (state: VehicleAssetState) => void;
 }) {
   const scenario = useMemo(
     () => customScenario ?? makeScenario(template),
@@ -567,9 +533,9 @@ function World({
     for (let i = 0; i < data.length; i += 4) {
       seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
       const n = seed >>> 29;
-      data[i] = 84 + n;
-      data[i + 1] = 95 + n;
-      data[i + 2] = 108 + n;
+      data[i] = 83 + n;
+      data[i + 1] = 85 + n;
+      data[i + 2] = 85 + n;
       data[i + 3] = 255;
     }
     const texture = new DataTexture(data, 128, 128, RGBAFormat);
@@ -582,53 +548,21 @@ function World({
   const scenery = useMemo(
     () => (
       <group position={[0, -0.3, 0]}>
-        <Box
-          position={[0, -0.64, 0]}
-          size={[19.4, 1.2, 14.5]}
-          color="#333a40"
-          rounded
-        />
-        <Box
-          position={[0, -0.1, 0]}
-          size={[19.6, 0.24, 14.7]}
-          color="#596066"
-          rounded
-        />
         <mesh position={[0, 0.09, 0.85]} receiveShadow>
-          <boxGeometry args={[16.4, 0.08, 10.4]} />
+          <boxGeometry args={[160, 0.08, 160]} />
           <meshStandardMaterial
             map={asphalt}
-            roughness={0.48}
-            metalness={0.15}
+            roughness={0.38}
+            metalness={0.22}
           />
         </mesh>
-        <Box
-          position={[0, 0.15, -4.8]}
-          size={[17.3, 0.24, 1.2]}
-          color="#545a5d"
-        />
-        {[-8.5, 8.5].map((x) => (
-          <group key={x}>
-            <Box
-              position={[x, 0.3, 0.8]}
-              size={[0.4, 0.45, 10.9]}
-              color="#687076"
-            />
-            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-              <Box
-                key={i}
-                position={[x, 0.54, -4 + i * 1.6]}
-                size={[0.42, 0.03, 0.55]}
-                color="#a89363"
-              />
-            ))}
-          </group>
-        ))}
-        <Box
-          position={[0, 0.28, 6.4]}
-          size={[17.4, 0.4, 0.35]}
-          color="#687076"
-        />
+        <group name="driving-area-boundary">
+          {boundaryCurbs(scenario.bounds).map(curb => <group key={curb.id} name={`boundary-${curb.id}`}>
+            <Box position={curb.position} size={curb.size} color="#747e84" />
+            <Box position={[curb.position[0],.535,curb.position[2]]}
+              size={[curb.size[0],.02,curb.size[2]]} color="#b7ad87" />
+          </group>)}
+        </group>
         {(customScenario ? [0] : [-6, -3, 0, 3, 6]).map((x, i) =>
           x === 0 ? (
             <group key={x} name="parking-goal">
@@ -764,26 +698,49 @@ function World({
             />
           </group>
         ))}
-        {/* 스카이라인/외곽 시설은 운전 영역 밖의 장식입니다. 충돌/관측에 주입하지 않습니다. */}
-        {[-9, -6.5, -3.5, 0, 3.5, 6.5, 9].map((x, i) => (
-          <group key={x} position={[x, -2, -10.5 - (i % 2) * 1.5]}>
-            <Box
-              position={[0, 0, 0]}
-              size={[2.2, 2.6 + (i % 3) * 1.1, 1.8]}
-              color={["#343c44", "#465057", "#29353f"][i % 3]}
-              rounded
-            />
-            {[0, 1, 2].map((j) => (
-              <Box
-                key={j}
-                position={[0, 0.2 + j * 0.45, 0.91]}
-                size={[1.3, 0.09, 0.025]}
-                color="#8c969c"
-              />
-            ))}
+        {/* 운전은 컷어웨이 뷰: 카메라를 가리는 촬영용 건축물만 숨긴다.
+            위의 실제 장애물/차량과 엔진의 충돌·센서 계약은 변경하지 않는다. */}
+        <group name="cinematic-architecture" visible={!driving}>
+        {[-10, -15].map(z => <group key={z} position={[0, 0, z]}>
+          {[-18, 18].map(x => <group key={x} position={[x, 0, 0]}>
+            <Box position={[0, 4, 0]} size={[.5, 8, .55]} color="#2c3736" />
+            <mesh position={[x < 0 ? .27 : -.27, 4, .15]}><boxGeometry args={[.04, 7.6, .08]} /><meshStandardMaterial color="#adfff0" emissive="#8bc9bb" emissiveIntensity={2.3} /></mesh>
+          </group>)}
+          <Box position={[0, 8, 0]} size={[36.5, .4, .55]} color="#303b39" />
+          <mesh position={[0, 7.79, .15]}><boxGeometry args={[35.9, .035, .07]} /><meshStandardMaterial color="#d6f4e4" emissive="#bfefd9" emissiveIntensity={2.4} /></mesh>
+        </group>)}
+        {[-23, 23].map(x => <group key={x} position={[x, 0, 2]}>
+          <Box position={[0, 3, 0]} size={[.6, 6, 30]} color="#3c4846" />
+          {[-9, -3, 3, 9].map(z => <group key={z} position={[x < 0 ? .32 : -.32, 3, z]}>
+            <Box position={[0, 0, 0]} size={[.03, 4.2, 4.8]} color="#95a4a0" />
+            <Box position={[x < 0 ? .03 : -.03, 0, 0]} size={[.04, 4.2, .07]} color="#35423d" />
+          </group>)}
+        </group>)}
+        {[-15, -9, -3, 3, 9, 15].map((x) => (
+          <group key={x} position={[x, 0, -13]}>
+            <Box position={[0, 3.5, 0]} size={[.75, 7, .85]} color="#555853" />
+            <Box position={[0, 6.6, 2]} size={[.9, .5, 8]} color="#404440" />
+            <mesh position={[0, 3.1, .436]}>
+              <boxGeometry args={[.065, 3.6, .025]} />
+              <meshStandardMaterial color="#f4e2bd" emissive="#f4d6a2" emissiveIntensity={3} />
+            </mesh>
+            <mesh position={[0, 6.32, 2]}>
+              <boxGeometry args={[.08, .035, 7]} />
+              <meshStandardMaterial color="#eee7d6" emissive="#eee7d6" emissiveIntensity={3} />
+            </mesh>
           </group>
         ))}
+        <Box position={[0, 3.3, -17]} size={[55, 6.6, .4]} color="#303634" />
+        {[-12, 0, 12].map(x => <group key={x} position={[x, 0, -16.76]}>
+          <Box position={[0, 2.8, 0]} size={[8, 3.6, .04]} color="#7c807a" />
+          <mesh position={[0, 2.8, .03]}>
+            <planeGeometry args={[7.7, 3.3]} />
+            <meshBasicMaterial color="#b9c5c5" />
+          </mesh>
+          <Box position={[0, 2.8, .08]} size={[.09, 3.6, .05]} color="#333c39" />
+        </group>)}
         <ParkingSign />
+        </group>
         {grid && (
           <gridHelper
             args={[24, 24, "#8574b8", "#c9bfe2"]}
@@ -804,19 +761,23 @@ function World({
         </mesh>
       </group>
     ),
-    [scenario, asphalt, grid],
+    [scenario, asphalt, grid, driving],
   );
   return (
     <>
       {scenery}
+      {boardingAt !== null && <BoardingRobot origin={carOrigin} began={boardingAt} animate={animated} />}
+      {!driving && !opening && !customScenario && (
+        <MrParkRobot position={[carOrigin.position[0] + 1.1, -.17, carOrigin.position[2] + 1.55]} rotation={.55} animate={animated} />
+      )}
       <group position={[0, -0.3, 0]}>
-        <Car
-          {...carOrigin}
-          motion={motion}
-          color="#d0d4d2"
-          brake={brake}
-          reverse={reverse}
-        />
+        {quality === "high" ? (
+          <CarAssetBoundary fallback={<AssetFallback onReady={onAssetReady}><Car {...carOrigin} motion={motion} color="#d0d4d2" brake={brake} reverse={reverse} /></AssetFallback>}>
+            <Suspense fallback={null}>
+              <DetailedCar {...carOrigin} motion={motion} brake={brake} reverse={reverse} boardingAt={boardingAt} mascotDriver={mascotDriver} onReady={onAssetReady} />
+            </Suspense>
+          </CarAssetBoundary>
+        ) : <Car {...carOrigin} motion={motion} color="#d0d4d2" brake={brake} reverse={reverse} />}
         {driving &&
           reverse &&
           result &&
@@ -922,6 +883,11 @@ export default function ParkingScene({
   opening = false,
   onOpeningDone,
   quality = "high",
+  monitor = null,
+  boardingAt = null,
+  mascotDriver = false,
+  onIntroShot,
+  onAssetState,
 }: {
   template: TemplateId;
   customScenario?: Scenario;
@@ -939,8 +905,18 @@ export default function ParkingScene({
   opening?: boolean;
   onOpeningDone: () => void;
   quality?: "high" | "low";
+  monitor?: MonitorMode | null;
+  boardingAt?: number | null;
+  mascotDriver?: boolean;
+  onIntroShot?: (shot: number) => void;
+  onAssetState?: (state: VehicleAssetState) => void;
 }) {
+  const [asset, setAsset] = useState<VehicleAssetState>("loading");
+  const assetReady = quality === "low" || asset !== "loading";
+  useEffect(() => { onAssetState?.(quality === "low" ? "low" : asset); }, [asset, quality, onAssetState]);
   const openingFrames = useMemo(() => buildOpening(), []);
+  const [introShot, setIntroShot] = useState(0);
+  useEffect(() => { onIntroShot?.(introShot); }, [introShot, onIntroShot]);
   const openingMotion = useRef<MotionFrame>({
     previous: openingFrames[0] ?? null,
     current: openingFrames[0] ?? null,
@@ -989,7 +965,7 @@ export default function ParkingScene({
   if (!supported || lost)
     return <SceneUnavailable onUnavailable={onUnavailable} />;
   return (
-    <div ref={host} className="scene-canvas" data-quality={quality}>
+    <div ref={host} className="scene-canvas" data-quality={quality} data-view={driving ? "cutaway" : "cinematic"} data-asset-state={quality === "low" ? "low" : asset}>
       <SceneBoundary onUnavailable={onUnavailable}>
         <Suspense
           fallback={
@@ -1008,27 +984,29 @@ export default function ParkingScene({
               <OpeningPlayback
                 frames={openingFrames}
                 motion={openingMotion}
-                paused={!visible || reducedMotion}
+                paused={!visible || reducedMotion || !assetReady}
                 onDone={onOpeningDone}
+                onShot={setIntroShot}
               />
             )}
-            <color attach="background" args={["#121a22"]} />
-            <fog attach="fog" args={["#121a22", 28, 90]} />
-            <ambientLight intensity={0.45} />
-            <Environment resolution={64} frames={1} environmentIntensity={1.3}>
+            <color attach="background" args={["#252c2d"]} />
+            {opening && <OpeningTelemetry motion={openingMotion} frames={openingFrames} />}
+            <fog attach="fog" args={["#252c2d", 24, 75]} />
+            <ambientLight intensity={0.35} />
+            <Environment resolution={128} frames={1} environmentIntensity={1.4}>
               <Lightformer
                 position={[0, 8, 0]}
                 rotation={[Math.PI / 2, 0, 0]}
-                scale={[12, 8, 1]}
-                intensity={2}
-                color="#edf3ff"
+                scale={[12, 2, 1]}
+                intensity={4}
+                color="#fff8e9"
               />
               <Lightformer
                 position={[-8, 3, 0]}
                 rotation={[0, Math.PI / 2, 0]}
-                scale={[5, 8, 1]}
-                intensity={1.5}
-                color="#b8cedd"
+                scale={[3, 8, 1]}
+                intensity={2}
+                color="#d3e0e4"
               />
               <Lightformer
                 position={[5, 3, 5]}
@@ -1038,12 +1016,14 @@ export default function ParkingScene({
                 color="#fff5db"
               />
             </Environment>
-            <hemisphereLight args={["#cadceb", "#26303a", 1.1]} />
+            <hemisphereLight args={["#cdd9dd", "#44413a", 1]} />
+            <directionalLight position={[10, 7, 14]} intensity={1.5} color="#e5edee" />
             <directionalLight
               position={[-6, 14, 8]}
-              intensity={2.3}
+              intensity={2.8}
+              color="#fff0d7"
               castShadow
-              shadow-mapSize={[1024, 1024]}
+              shadow-mapSize={quality === "high" ? [2048, 2048] : [512, 512]}
               shadow-camera-left={-16}
               shadow-camera-right={16}
               shadow-camera-top={16}
@@ -1060,16 +1040,24 @@ export default function ParkingScene({
               brake={brake}
               reverse={reverse || opening}
               motion={sceneMotion}
+              animated={!reducedMotion && visible}
+              opening={opening}
+              quality={quality}
+              boardingAt={boardingAt}
+              mascotDriver={mascotDriver}
+              onAssetReady={setAsset}
             />
             <CameraRig
               mode={cameraMode}
               result={result}
-              reducedMotion={reducedMotion || !visible}
+              reducedMotion={reducedMotion || !visible || !assetReady}
               driving={driving}
               onStoryProgress={onStoryProgress}
               motion={sceneMotion}
               opening={opening}
+              introShot={introShot}
             />
+            {driving && monitor && <CameraMonitor motion={sceneMotion} mode={monitor} />}
           </Canvas>
         </Suspense>
       </SceneBoundary>

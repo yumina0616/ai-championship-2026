@@ -1,6 +1,10 @@
 # Mr.Park Cloudflare 공개 배포
 
-2026-09-17, #13/#15. 공개 주소: https://parkside-parking.jinhyeong9568-663.workers.dev
+2026-09-19, #13/#15. 사용자 도메인: https://mrpark.ai.kr
+
+기존 주소 https://parkside-parking.jinhyeong9568-663.workers.dev 도 유지합니다. 가비아 도메인의 네임서버는 `opal.ns.cloudflare.com`, `rudy.ns.cloudflare.com`이며 Cloudflare Free zone과 기존 `parkside-parking` Worker의 Custom Domain을 사용합니다. 2026-09-19 공개 DNS와 HTTPS 200 응답을 확인했습니다. 지역별 DNS 캐시는 반영 시점이 다를 수 있습니다. `wrangler.jsonc`에 도메인을 고정해 재배포 때 대시보드 설정이 유실되지 않도록 합니다. 등록기관 이전·별도 호스팅 구매·R2 공개 설정은 필요하지 않습니다.
+
+새 도메인은 기존 `workers.dev`와 다른 브라우저 출처입니다. 로컬 기록·전송 동의·삭제 영수증은 자동으로 이전되지 않습니다. 기존 서버 기록의 삭제는 원래 접속한 주소의 기록 설정에서 수행하고, 새 주소에서는 기록 방식을 다시 선택합니다. 임의로 기록을 복사하거나 동의를 승계하지 않습니다.
 
 ## 서비스명과 기존 식별자
 
@@ -42,6 +46,15 @@ Mr.Park 브랜드·선택형 수집 반영 version: `b0d9b4c5-b363-4134-95de-c8a
 복구는 Cloudflare Deployments에서 실제 버전을 확인하고 직전 검증 버전으로 rollback한다.
 
 ## 확인 결과와 남은 점
+
+2026-09-19 디자인·주행 UX 배포:
+
+- 코드 커밋: `39c5308`, 브랜치: `feature/12-mrpark-art-direction` (main 병합과 별개로 사용자 승인 후 직접 배포).
+- Worker version: `29934df1-03cd-44b4-9b80-ca11ac3a3280`.
+- 새 도메인과 기존 주소 모두 홈페이지 200 및 로컬 배포 빌드 HTML 일치, health `storage: ready`, collection `enabled: true` 확인.
+- 영상 2개·차량 GLB·폰트·안내·출처 페이지 200 및 올바른 Content-Type 확인. 새 도메인의 실제 브라우저에서 고화질 3D 랜딩 렌더링 확인.
+- 새 설치 후 엔진 타입 검사/65 tests, Worker·수집 8 tests, 로컬 API 3 tests, Python 7 tests, 문서 검사 및 웹 빌드 통과. 프로덕션 artifact 브라우저 검사 1 test 통과(학습 가중치 추론·로컬 기록·동의 없는 POST 없음).
+- Three.js/학습 런타임의 500 kB 초과 chunk 경고는 남아 있습니다. 이번 검증은 실기기 전체 성능·실제 사용자 기록 수집 검증을 대신하지 않습니다. 사용자 원본 데이터를 조회하거나 시험 업로드하지 않았습니다.
 
 수집 공개 검증: `/api/collection` enabled true/안내 버전/30일/문의 주소 확인, health storage ready/collection enabled. 실제 1,801-step(90초) 합성 기록 7,028,089 bytes POST 201, 같은 삭제 capability 재전송 200, DELETE 200 확인. 테스트 원본은 삭제했으며 개인정보나 실제 사용자 기록을 검증용으로 사용하지 않았다. 만료 규칙은 CLI로 읽어 확인했다. 일일 접수 슬롯·삭제 tombstone만 각 만료일까지 남는다.
 

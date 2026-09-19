@@ -47,7 +47,7 @@ for (const width of [1440, 390]) {
     await page.goto("/");
     const caption = page.getByLabel("기준 제어기 주차 시연");
     await expect(caption).toContainText("학습 AI 아님");
-    const canvas = page.locator("canvas");
+    const canvas = page.locator(".world-stage canvas");
     await expect(canvas).toHaveCount(1);
     await canvas.evaluate((el) =>
       el.setAttribute("data-opening-continuity", "original"),

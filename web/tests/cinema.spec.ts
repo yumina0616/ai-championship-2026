@@ -42,7 +42,7 @@ for (const width of [1440, 390]) {
     await page.goto("/");
     await page.getByRole("button", { name: "오프닝 건너뛰기" }).click();
     const hero = page.locator(".hero");
-    const canvas = page.locator("canvas");
+    const canvas = page.locator(".world-stage canvas");
     await expect(canvas).toHaveCount(1);
     await canvas.evaluate((el) =>
       el.setAttribute("data-story-continuity", "original"),
@@ -59,11 +59,14 @@ for (const width of [1440, 390]) {
     expect(await progress()).toBeLessThan(before + 0.3);
     await page.mouse.wheel(0, -400);
     await expect.poll(async () => (await hero.boundingBox())!.y).toBe(0);
-    await page.getByRole("button", { name: "장식 모션 멈추기" }).click();
+    await expect(page.getByRole("button", {name:/장식 모션/})).toHaveCount(0);
+    await page.getByText("화면 설정 · AI 모델 정보",{exact:true}).click();
+    await page.getByRole("checkbox",{name:"화면 움직임 줄이기"}).check();
     const held = await progress();
     await page.waitForTimeout(500);
     expect(await progress()).toBe(held);
-    await page.getByRole("button", { name: "장식 모션 켜기" }).click();
+    await page.getByRole("checkbox",{name:"화면 움직임 줄이기"}).uncheck();
+    await page.getByRole("link",{name:"Mr.Park 미스터팍 홈"}).click();
     await expect.poll(progress).toBeGreaterThan(held);
     await expect(page.locator(".hero-actions")).toHaveCSS(
       "animation-name",
@@ -91,7 +94,7 @@ test("시네마틱 진입은 Canvas를 유지하며 준비 중 입력을 차단�
 }) => {
   test.setTimeout(60_000);
   await page.goto("/");
-  const canvas = page.locator("canvas");
+  const canvas = page.locator(".world-stage canvas");
   await expect(canvas).toHaveCount(1);
   await canvas.evaluate((el) => el.setAttribute("data-continuity", "original"));
   await expect(page.locator(".opening-signature")).not.toBeVisible();
@@ -118,7 +121,7 @@ test("시네마틱 진입은 Canvas를 유지하며 준비 중 입력을 차단�
   await page.screenshot({ path: "test-results/cinema-drive.png" });
   await page.getByRole("button", { name: "차고", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "이 공간에서 시작" }),
+    page.getByRole("button", { name: "직접 운전하기" }),
   ).toBeFocused();
   await expect(canvas).toHaveAttribute("data-continuity", "original");
   await expect(page.locator(".opening-signature")).toHaveCount(0);

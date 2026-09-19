@@ -11,8 +11,7 @@ test("AI 첫 다운로드가 8초를 넘어도 로딩을 유지하고 실제 추
     await route.continue();
   });
   await page.goto("/#garage");
-  await page.getByRole("radio", { name: /미스터팍/ }).check();
-  await page.getByRole("button", { name: "미스터팍 운전 보기" }).click();
+  await page.getByRole("button", { name: "미스터팍에게 맡기기" }).click();
   await expect(page.getByRole("status").filter({ hasText: "최대 30초" })).toBeVisible();
   await expect(page.getByRole("button", { name: "연습 마치기", exact: true })).toBeEnabled({ timeout: 30000 });
   await expect(page.getByRole("alert")).toHaveCount(0);
@@ -79,8 +78,7 @@ test("마스코트는 수동 입력 없이 같은 엔진으로 운전하고 실�
   test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#garage");
-  await page.getByRole("radio", { name: /미스터팍/ }).check();
-  await page.getByRole("button", { name: "미스터팍 운전 보기" }).click();
+  await page.getByRole("button", { name: "미스터팍에게 맡기기" }).click();
   await expect(page.locator(".mission-hud")).toContainText("LEARNED LIVE");
   await expect(page.getByRole("button", { name: "R 기어" })).toBeDisabled();
   await page.keyboard.press("KeyE");

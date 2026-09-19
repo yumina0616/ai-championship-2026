@@ -424,6 +424,7 @@ export function useDriving(
     stop,
     press,
     release,
+    clearInputs,
     steer: (value: number | null) => {
       analogSteer.current = active && !paused && !policy.current ? value : null;
     },

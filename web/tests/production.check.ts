@@ -18,8 +18,9 @@ test("정적 배포 artifact에서 실제 가중치 추론·기록과 개발 API
   await expect(
     page.getByText("개발 전용 기여 테스트", { exact: false }),
   ).toHaveCount(0);
-  await page.getByRole("radio", { name: /미스터팍/ }).check();
-  await page.getByRole("button", { name: "미스터팍 운전 보기" }).click();
+  await page.getByRole("button", { name: "미스터팍에게 맡기기" }).click();
+  await page.getByLabel("이 브라우저에 주행 기록 보관", { exact: true }).check();
+  await page.getByRole("button", { name: "선택하고 시작하기" }).click();
   await expect(page.locator(".mission-hud")).toContainText("LEARNED LIVE");
   await expect(page.locator(".mission-hud")).toContainText("미스터팍");
   await expect

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { NOTICE_VERSION } from "./src/collection-record";
 
 const mesa = process.env.PARKSIDE_TEST_MESA === "1";
 
@@ -27,18 +28,20 @@ export default defineConfig({
         ...(mesa ? ["--ignore-gpu-blocklist"] : []),
       ],
     },
-    storageState:
-      process.env.CI || process.env.PARKSIDE_TEST_LOW
-        ? {
+    // 기존 운전 회귀 검사는 선택을 마친 재방문 사용자. 첫 방문은 interaction-flow에서 빈 저장소로 검사한다.
+    storageState: {
             cookies: [],
             origins: [
               {
                 origin: "http://127.0.0.1:5173",
-                localStorage: [{ name: "parkside-quality", value: "low" }],
+                localStorage: [
+                  { name: "mrpark-record-choice", value: NOTICE_VERSION },
+                  { name: "parkside-record-locally", value: "on" },
+                  ...(process.env.CI || process.env.PARKSIDE_TEST_LOW ? [{ name: "parkside-quality", value: "low" }] : []),
+                ],
               },
             ],
-          }
-        : undefined,
+          },
   },
   projects: [
     {

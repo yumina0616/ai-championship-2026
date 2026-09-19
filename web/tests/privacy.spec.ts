@@ -47,12 +47,16 @@ test("기록 끔을 유지하고 개인 연습은 동작하며 업로드·기록
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#garage");
+  await page.getByRole("button", { name: /^기록 설정/ }).click();
   await page.getByLabel("이 브라우저에 주행 기록 보관").uncheck();
+  await page.getByRole("button", { name: "기록 없이 설정", exact: true }).click();
   await page.reload();
+  await page.getByRole("button", { name: /^기록 설정/ }).click();
   await expect(
     page.getByLabel("이 브라우저에 주행 기록 보관"),
   ).not.toBeChecked();
-  await page.getByRole("button", { name: "이 공간에서 시작" }).click();
+  await page.getByRole("button", { name: "기록 선택 닫기" }).click();
+  await page.getByRole("button", { name: "직접 운전하기" }).click();
   await expect(page.getByRole("button", { name: "R 기어" })).toBeEnabled();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "이번 연습 마치기" }).click();
