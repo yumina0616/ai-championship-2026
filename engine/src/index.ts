@@ -3,6 +3,7 @@ export { integrateBicycleModel, normalizeAngle, clampCommand, DEFAULT_MAX_ACCEL_
 export {
   vehicleFootprint,
   obbOverlap,
+  rectFullyInside,
   footprintCollides,
   footprintOutOfBounds,
   type OrientedRect,
