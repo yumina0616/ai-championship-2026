@@ -70,12 +70,13 @@ test("기어 단축키·시점 유지와 수동 후방 선택·드래그 조향�
   await expect(
     page.getByRole("button", { name: "차량 추적", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  // #17: 맵 경계도 센서로 감지하게 되면서(engine/src/sensor.ts) 중심 원시 최소값이 옆쪽 경계처럼
-  // 전진만으로는 잘 안 바뀌는 값에 붙들릴 수 있다 — 고정 시간을 기다리는 대신(차를 필요 이상
-  // 가속시켜 뒤 브레이크 검사를 깨뜨렸던 적이 있음) 값이 바뀔 때까지만 폴링한다.
-  await expect
-    .poll(async () => page.getByTestId("raw-range").innerText())
-    .not.toBe(before);
+  // #17: "값이 바뀔 때까지" 무기한 기다리면(고정 500ms 대기든, 끝없는 폴링이든) 조향이 남은
+  // 채로 차가 너무 오래 가속해서 맵 경계를 넘어 시뮬레이션이 끝나버리는 걸 실제 CI 트레이스로
+  // 확인했다(브레이크가 안 먹힌 게 아니라 종료돼서 조작 버튼 자체가 비활성화된 상태였음).
+  // 가속 시간을 짧게 고정해 그 위험을 없앴다 — 센서 갱신 주기보다는 충분히 길어 값은 갱신되지만
+  // 경계에 닿을 만큼 길지는 않다.
+  await page.waitForTimeout(200);
+  await expect(page.getByTestId("raw-range")).not.toHaveText(before);
   await brake(page);
   await page.getByRole("button", { name: "일시정지", exact: true }).click();
   await expect(page.getByLabel("실시간 가상 센서")).toContainText("HOLD");
