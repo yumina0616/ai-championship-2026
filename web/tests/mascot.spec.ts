@@ -4,7 +4,11 @@ import { policySupportError, POLICY_VERSION } from "../src/policy-info";
 import { parseEpisode } from "../src/episodes";
 
 test("AI 첫 다운로드가 8초를 넘어도 로딩을 유지하고 실제 추론 시작", async ({ page }) => {
-  test.setTimeout(45000);
+  // #17 다양한 장애물 배치로 재학습한 모델(교체 전/후 대조 실행 3회씩)로 바꾼 뒤 이 테스트가
+  // 45초 예산을 넘겨 간헐적으로 실패했다 — 기존 모델은 25~33초, 새 모델은 33~42초로 일관되게
+  // 더 오래 걸렸다(모델이 나빠진 게 아니라 이 시나리오에서 걸리는 실제 소요 시간이 달라짐).
+  // 여유를 넉넉히 둬서(70초) 매번 관측치 이상으로 잡는다.
+  test.setTimeout(70000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.route("**/src/policy.ts", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 9000));
