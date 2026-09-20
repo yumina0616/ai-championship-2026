@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  Bot,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -136,8 +137,9 @@ export default function App() {
     }
   });
   const [preferenceError, setPreferenceError] = useState("");
-  const [recordPromptFor, setRecordPromptFor] = useState<Mode | "settings" | null>(null);
-  const [launchAfterChoice, setLaunchAfterChoice] = useState<Mode | null>(null);
+  const [recordPromptFor, setRecordPromptFor] = useState<Mode | "settings" | "help" | null>(null);
+  const [launchAfterChoice, setLaunchAfterChoice] = useState<{ mode: Mode; helping: boolean } | null>(null);
+  const [helpingMrPark, setHelpingMrPark] = useState(false);
   const recordChoiceSeen = useRef((() => {
     try { return localStorage.getItem(RECORD_CHOICE_KEY) === RECORD_CHOICE_VERSION; } catch { return false; }
   })());
@@ -299,6 +301,10 @@ export default function App() {
   const observation = driving.result?.observation;
   const speed = Math.abs((observation?.speedMps ?? 0) * 3.6);
   const ended = driving.result?.outcome.reason;
+  const mascotNeedsHelp = mode === "mascot" && (ended === "collision" || ended === "timeout");
+  const helpSuccess = mode === "human" && helpingMrPark && ended === "success";
+  const currentUpload = driving.lastEpisode?.header.episodeId === collection.lastUpload?.episodeId
+    ? collection.lastUpload : null;
   const leftDrivingArea = outsideDrivingArea(driving.result, driving.scenario);
   const parkConfirm =
     mode === "human" &&
@@ -419,7 +425,7 @@ export default function App() {
     if (!launchAfterChoice) return;
     setLaunchAfterChoice(null);
     // 기록 설정이 반영된 render 뒤에 시작해 이전 upload/recordLocally를 쓰지 않는다.
-    void start(launchAfterChoice, true);
+    void start(launchAfterChoice.mode, true, launchAfterChoice.helping);
   }, [launchAfterChoice]);
 
   function confirmRecords(local: boolean, share: boolean) {
@@ -433,10 +439,17 @@ export default function App() {
     } catch { setPreferenceError("선택은 이번 탭에만 적용돼요. 새로고침하면 다시 확인해주세요."); }
     const next = recordPromptFor;
     setRecordPromptFor(null);
-    if (next && next !== "settings") setLaunchAfterChoice(next);
+    if (next && next !== "settings") setLaunchAfterChoice({ mode: next === "help" ? "human" : next, helping: next === "help" });
   }
 
-  async function start(selectedMode: Mode = mode, recordsConfirmed = false) {
+  function helpMrPark() {
+    // 같은 환경을 초기화한다. 실패 위치를 이어받거나 과거 기록을 소급 전송하지 않는다.
+    if (collection.available && !(collection.enabled && recordLocally)) {
+      setRecordPromptFor("help");
+    } else void start("human", false, true);
+  }
+
+  async function start(selectedMode: Mode = mode, recordsConfirmed = false, helping = false) {
     if (state === "loading" || assetLoading) return;
     if (!recordsConfirmed && !recordChoiceSeen.current) {
       setOpening(false);
@@ -444,6 +457,7 @@ export default function App() {
       return;
     }
     setCockpitFolded(false);
+    setHelpingMrPark(helping);
     setWelcomeRevision(0);
     setMode(selectedMode);
     if (state === "error") setSceneRevision((n) => n + 1);
@@ -524,6 +538,7 @@ export default function App() {
     }
   }
   function leave() {
+    setHelpingMrPark(false);
     setBoardingAt(null);
     setDeparting(false);
     requestId.current++;
@@ -1104,7 +1119,7 @@ export default function App() {
           </main>
         </>
       ) : (
-        <main className="drive-screen">
+        <main className={`drive-screen${state === "finished" && (mascotNeedsHelp || helpingMrPark) ? " result-help-finished" : ""}`}>
           <header className="drive-header">
             <button className="back-button" onClick={leave}>
               <ArrowLeft size={17} />
@@ -1314,13 +1329,14 @@ export default function App() {
             )}
             {state === "finished" && (
               <div className="stage-overlay">
-                <section className="result-panel">
+                <section className={`result-panel${mascotNeedsHelp || helpSuccess ? " result-community" : ""}`}>
                   <div className="result-kicker">
-                    <span>RUN / COMPLETE</span>
+                    <span>{mascotNeedsHelp ? "YOUR TURN / MR.PARK" : helpSuccess ? "NICE TEAMWORK / MR.PARK" : "RUN / COMPLETE"}</span>
                     <Flag size={20} />
                   </div>
+                  {(mascotNeedsHelp || helpSuccess) && <div className={`result-mascot ${helpSuccess ? "cheering" : "hopeful"}`} aria-hidden="true"><Bot size={36} /><span>{helpSuccess ? "고마워요!" : "도와줄래요?"}</span></div>}
                   <h2 ref={resultTitle} tabIndex={-1}>
-                    {ended === "success"
+                    {mascotNeedsHelp ? <>앗, 여긴<br />좀 어렵네요…</> : helpSuccess ? "이렇게 주차하는 거군요!" : ended === "success"
                       ? "NICE PARK."
                       : ended === "collision"
                         ? "TRY AGAIN."
@@ -1329,7 +1345,7 @@ export default function App() {
                           : "GOOD RUN."}
                   </h2>
                   <p>
-                    {ended === "success"
+                    {mascotNeedsHelp ? "같은 주차장, 같은 출발점. 이번엔 직접 도전해 볼래요?" : helpSuccess ? "미스터팍과 같은 공간에 도전해 줘서 고마워요." : ended === "success"
                       ? "주차 완료! 같은 공간에서 한 번 더 해볼까요?"
                       : ended === "collision"
                         ? leftDrivingArea ? "차체가 바깥 연석의 안쪽 경계를 넘었어요. 연석 안에서 다시 도전해보세요." : "차체가 장애물에 닿았어요. 다음 시도는 다르게."
@@ -1337,7 +1353,7 @@ export default function App() {
                           ? "90초가 지났어요. 같은 환경에서 다시 도전할 수 있어요."
                           : "여기까지의 시도를 확인하고, 다시 도전해보세요."}
                   </p>
-                  {ended === "timeout" && driving.parkingStatus && (
+                  {!mascotNeedsHelp && ended === "timeout" && driving.parkingStatus && (
                     <p className="parking-timeout-reason">
                       마지막 미충족 조건:{" "}
                       {driving.parkingStatus.ready
@@ -1380,10 +1396,20 @@ export default function App() {
                       </dd>
                     </div>
                   </dl>
+                  {mode === "human" && helpingMrPark && (
+                    <div className="result-contribution" role="status" aria-live="polite">
+                      <strong>{currentUpload?.status === "stored" ? "주행 기록을 전달했어요." : currentUpload?.status === "sending" ? "주행 기록을 전송 중이에요." : currentUpload?.status === "failed" ? "기록 전달을 확인하지 못했어요." : currentUpload?.status === "deleted" ? "서버 기록을 삭제했어요." : "이번 도전도 소중한 경험이에요."}</strong>
+                      <p>{currentUpload?.status === "stored" ? "검토 후 학습에 활용될 수 있어요. 바로 모델이 업데이트되는 것은 아니에요." : currentUpload?.status === "sending" ? "서버의 저장 확인을 기다리고 있어요." : currentUpload?.status === "failed" ? currentUpload.message : currentUpload?.status === "deleted" ? "새 전송도 꺼졌어요. 이미 만든 학습 사본은 수집 안내의 문의처로 삭제를 요청할 수 있어요." : "이번 주행은 서버로 보내지 않았어요. 기록을 보내지 않아도 자유롭게 도전할 수 있어요."}</p>
+                      {!collection.enabled && collection.available && <button className="text-link" onClick={() => setRecordPromptFor("help")}>다음 도전부터 학습에 보태기 <ArrowRight size={15} /></button>}
+                    </div>
+                  )}
                   <div className="result-actions">
-                    <button className="button orange" onClick={() => void start()}>
+                    {mascotNeedsHelp ? <>
+                      <button className="button orange" onClick={helpMrPark}>내가 운전해 볼게 <ArrowRight size={18} /></button>
+                      <button className="button secondary" onClick={() => void start("mascot")}>미스터팍 다시 도전 <RotateCcw size={17} /></button>
+                    </> : <button className="button orange" onClick={() => void start(mode, false, helpingMrPark)}>
                       같은 공간 다시 도전 <RotateCcw size={17} />
-                    </button>
+                    </button>}
                     <button className="button secondary" onClick={leave}>
                       공간 바꾸기 <ArrowUpRight size={17} />
                     </button>
@@ -1605,7 +1631,7 @@ export default function App() {
         </main>
       )}
       {recordPromptFor && <RecordChoice collection={collection} local={recordLocally}
-        settings={recordPromptFor === "settings"} onConfirm={confirmRecords} onCancel={() => setRecordPromptFor(null)} />}
+        settings={recordPromptFor === "settings"} helping={recordPromptFor === "help"} onConfirm={confirmRecords} onCancel={() => setRecordPromptFor(null)} />}
       <dialog
         ref={modal}
         aria-labelledby="dialog-title"

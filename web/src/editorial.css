@@ -222,3 +222,30 @@
   .mascot-wordmark { left: 16px; bottom: 16px; }
   .mascot-caption { padding: 20px; gap: 16px; }
 }
+
+/* 실패에서 참여로: 한 가지 주 행동을 강조하고 전송 결과는 별도로 안내한다. */
+.cinema .result-panel { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.cinema .result-community h2 { font-family: inherit; font-size: clamp(27px,3vw,38px); line-height: 1.25; letter-spacing: -.045em; text-shadow: none; word-break: keep-all; }
+.result-mascot { display: flex; align-items: center; gap: 14px; margin-top: 22px; color: #c4e4ee; }
+.result-mascot > svg { padding: 10px; box-sizing: content-box; border: 1px solid #a6d0df42; border-radius: 18px; background: #243743; }
+.result-mascot > span { font-size: 13px; font-weight: 600; }
+.result-mascot.cheering { color: #ddedbe; }
+.result-mascot.cheering > svg { background: #2d3c31; border-color: #ddedbe42; }
+.cinema .result-community .result-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.result-community .result-actions .orange { grid-column: 1 / -1; }
+.result-community .result-actions > :last-child:nth-child(2) { grid-column: 1 / -1; }
+.result-community .result-actions .button { justify-content: center; padding-inline: 12px; font-size: 13px; }
+.result-contribution { margin: 0 0 20px; padding: 15px 17px; border-left: 2px solid #96bbc9; background: #0c1722; text-align: left; }
+.result-contribution strong { color: #e4edf2; font-size: 14px; }
+.cinema .result-contribution p { font-size: 13px; line-height: 1.7; margin: 6px 0 0; color: #bfcfd9; }
+.result-contribution .text-link { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; color: #d7e8f1; font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) {
+  .result-mascot > svg { animation: mrpark-greeting .55s ease-out both; }
+}
+@keyframes mrpark-greeting { from { transform: translateY(8px) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-width: 600px) {
+  .result-help-finished .cockpit { display: none; }
+  .cinema .result-community { padding: 22px; }
+  .result-community .result-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-block: 18px; }
+  .result-community .result-actions .button { font-size: 12px; }
+}
