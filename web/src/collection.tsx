@@ -5,6 +5,7 @@ import { collectionRecord, COLLECTION_BYTES, NOTICE_VERSION } from "./collection
 const CONSENT = "mr-park-learning-consent";
 const RECEIPTS = "mr-park-learning-receipts";
 type Receipt = { token: string; day: string };
+type UploadResult = { episodeId: string; status: "sending" | "stored" | "failed" | "deleted"; message?: string };
 function receipts(): Receipt[] {
   const value = JSON.parse(localStorage.getItem(RECEIPTS) ?? "[]");
   if (!Array.isArray(value) || value.length > 1000 || value.some(r =>
@@ -22,6 +23,7 @@ export function useCollection() {
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [lastUpload, setLastUpload] = useState<UploadResult | null>(null);
   const allowed = useRef(false);
   const pending = useRef(new Set<Promise<void>>());
   useEffect(() => {
@@ -55,6 +57,12 @@ export function useCollection() {
   };
   const upload = useCallback((episode: LocalEpisode) => {
     if (!allowed.current || !episode.steps.length || !episode.footer.logComplete) return;
+    const episodeId = episode.header.episodeId;
+    setLastUpload({ episodeId, status: "sending" });
+    const update = (status: UploadResult["status"], message?: string) => {
+      // 이전 실행의 늦은 응답이 다음 주행의 전송 상태를 덮어쓰지 않는다.
+      setLastUpload(current => current?.episodeId === episodeId ? { episodeId, status, message } : current);
+    };
     const task = (async () => {
       try {
         const body = JSON.stringify(collectionRecord(episode));
@@ -65,7 +73,7 @@ export function useCollection() {
           if (saved.length >= 1000) throw Error("삭제 영수증이 가득 찼어요. 서버 기록 삭제 후 다시 켜주세요.");
           return [...saved, { token, day: new Date().toISOString().slice(0, 10) }];
         });
-        if (!allowed.current) return;
+        if (!allowed.current) { update("failed", "전송 동의가 꺼져 이번 기록은 보내지 않았어요."); return; }
         setMessage("완료한 주행 기록을 전송 중이에요.");
         const r = await fetch("/api/episodes", {
           method: "POST", credentials: "omit", referrerPolicy: "no-referrer",
@@ -74,7 +82,11 @@ export function useCollection() {
         });
         if (!r.ok || (await r.json()).stored !== true) throw Error("서버 전송을 확인하지 못했어요. 자동 재시도는 하지 않으며 개인 연습은 계속할 수 있어요.");
         setMessage("주행 기록을 저장했어요. 아직 모델 학습에 반영된 것은 아니에요.");
-      } catch (error) { setMessage(error instanceof Error ? error.message : "전송하지 못했어요."); }
+        update("stored");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "전송하지 못했어요.";
+        setMessage(message); update("failed", message);
+      }
     })();
     pending.current.add(task);
     void task.finally(() => pending.current.delete(task));
@@ -94,9 +106,10 @@ export function useCollection() {
         if (!r.ok) throw Error("일부 삭제를 완료하지 못했어요. 1분 뒤 다시 눌러주세요. 미삭제 영수증은 보관했어요.");
         await updateReceipts(all => all.filter(x => x.token !== receipt.token));
       }
+      setLastUpload(current => current ? { ...current, status: "deleted" } : null);
       setMessage("이 브라우저의 서버 기록을 삭제했어요. 이미 만든 학습 사본은 문의로 삭제 요청할 수 있어요.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "삭제에 실패했어요."); }
     finally { setBusy(false); }
   };
-  return { available, enabled: consent && available, message, busy, upload, changeConsent, remove };
+  return { available, enabled: consent && available, message, busy, lastUpload, upload, changeConsent, remove };
 }

@@ -6,10 +6,11 @@ import { NOTICE_VERSION } from "./collection-record";
 export const RECORD_CHOICE_KEY = "mrpark-record-choice";
 export const RECORD_CHOICE_VERSION = NOTICE_VERSION;
 
-export default function RecordChoice({ collection, local, settings, onConfirm, onCancel }: {
+export default function RecordChoice({ collection, local, settings, helping = false, onConfirm, onCancel }: {
   collection: ReturnType<typeof useCollection>;
   local: boolean;
   settings: boolean;
+  helping?: boolean;
   onConfirm: (local: boolean, share: boolean) => void;
   onCancel: () => void;
 }) {
@@ -24,9 +25,9 @@ export default function RecordChoice({ collection, local, settings, onConfirm, o
   }, []);
   return <dialog ref={ref} className="record-choice" aria-labelledby="record-choice-title" onCancel={onCancel}>
     <button className="dialog-close icon-button" aria-label="기록 선택 닫기" onClick={onCancel}><X size={20} /></button>
-    <span className="eyebrow">{settings ? "YOUR RECORD SETTINGS" : "BEFORE THE FIRST DRIVE"}</span>
-    <h2 id="record-choice-title">이번 주행,<br /><em>어떻게 남길까요?</em></h2>
-    <p className="record-intro">선택하지 않아도 모든 운전을 즐길 수 있어요.</p>
+    <span className="eyebrow">{helping ? "YOUR TURN / MR.PARK" : settings ? "YOUR RECORD SETTINGS" : "BEFORE THE FIRST DRIVE"}</span>
+    <h2 id="record-choice-title">{helping ? <>미스터팍과 함께,<br /><em>이번엔 내 차례.</em></> : <>이번 주행,<br /><em>어떻게 남길까요?</em></>}</h2>
+    <p className="record-intro">{helping ? "같은 출발점에서 새로 시작해요. 기록을 보내지 않아도 도전할 수 있어요." : "선택하지 않아도 모든 운전을 즐길 수 있어요."}</p>
     <label className={`record-option ${keep ? "chosen" : ""}`}>
       <HardDrive aria-hidden="true" /><span><strong>이 브라우저에 주행 기록 보관</strong><small>최근 5회 · 다시 보기와 비교용 · 서버 전송 없음</small></span>
       <input type="checkbox" aria-label="이 브라우저에 주행 기록 보관" checked={keep} onChange={e => { setKeep(e.target.checked); if (!e.target.checked) setShare(false); }} />

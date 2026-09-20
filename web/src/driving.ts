@@ -430,6 +430,7 @@ export function useDriving(
     },
     start: (loaded: LoadedPolicy | null = null) => {
       if (reset()) {
+        setLastEpisode(null);
         uploadAtStart.current = currentUpload.current;
         policy.current = loaded;
         setStorageError("");
