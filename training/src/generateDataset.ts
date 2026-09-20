@@ -45,7 +45,7 @@ function loadScenario(fileName: string): Scenario {
   return loadScenarioFromJson(json);
 }
 
-interface DatasetSample {
+export interface DatasetSample {
   features: number[];
   label: number[];
 }
@@ -64,7 +64,7 @@ interface RolloutSummary {
  * 채택)한다. 실패한 시도는 조용히 버린다(docs/data-learning.md: 검증 안 된 조작을 정답으로
  * 쓰지 않는다). rng 시퀀스는 scenario.seed 기반이라 항상 같은 결과가 나온다(재현성).
  */
-function generateJitteredSmoothedSamples(scenario: Scenario, attempts: number): { succeeded: number; samples: DatasetSample[] } {
+export function generateJitteredSmoothedSamples(scenario: Scenario, attempts: number): { succeeded: number; samples: DatasetSample[] } {
   const rng = createRng((scenario.seed ?? 0) * 2000 + 13);
   const samples: DatasetSample[] = [];
   let succeeded = 0;

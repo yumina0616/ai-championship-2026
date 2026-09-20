@@ -1,6 +1,6 @@
 {
   "policyVersion": "parking-mlp-v1",
-  "artifactChecksumSha256": "c799a6ca58953e0029550d5940d9a8c183080b4315dc8f7af484320fbc932fb0",
+  "artifactChecksumSha256": "94a24384e078c72439203ecdfb95e201a2a53c5d49f96bfcc5e342534941846d",
   "framework": "@tensorflow/tfjs",
   "frameworkVersion": "4.x",
   "runtime": "pure-js (cpu backend) — 브라우저와 동일 패키지, tfjs-node 미사용(Windows 네이티브 바인딩 로드 실패로 회피)",
@@ -36,45 +36,45 @@
     "initialLearningRate": 0.001,
     "learningRateDecay": "epoch/(epochs/3)마다 x0.1 (3단계 감쇠)",
     "shuffle": "사전 셔플 1회(seed 기반), epoch별 재셔플 없음",
-    "trainSamples": 61397,
-    "validationSamples": 39030,
-    "finalTrainLoss": 0.0002184861560203848,
+    "trainSamples": 103035,
+    "validationSamples": 50913,
+    "finalTrainLoss": 0.0002193378650530178,
     "finalValidationLoss": null,
     "checkpointSelection": {
       "method": "매 20epoch마다 parkside-open/neighbors/pillar를 canonical 시작 위치에서 실제로 굴려(runLearnedEpisode), 성공 개수>충돌없음>오차 순으로 가장 좋은 체크포인트를 저장 — #17 시도 19",
-      "bestEpoch": 240,
+      "bestEpoch": 160,
       "bestScore": [
-        3,
-        0,
-        -0.37176275135085485
+        2,
+        -1,
+        -3.6077288368804337
       ],
       "bestCheckpointResult": [
         {
           "scenarioId": "parkside-open-v1",
           "reason": "success",
-          "position": 0.2899670973525069,
-          "yaw": 0.05902277715231996
+          "position": 0.3054998616387563,
+          "yaw": 0.028053424892388712
         },
         {
           "scenarioId": "parkside-neighbors-v1",
           "reason": "success",
-          "position": 0.18397672168651302,
-          "yaw": 0.013841304786305741
+          "position": 0.10448947154170851,
+          "yaw": 0.0022309337335482127
         },
         {
           "scenarioId": "parkside-pillar-v1",
-          "reason": "success",
-          "position": 0.4861908115571823,
-          "yaw": 0.004712729789555503
+          "reason": "collision",
+          "position": 8.002687166261001,
+          "yaw": 1.1749706469739811
         }
       ]
     },
-    "trainedAt": "2026-09-19T10:58:33.228Z"
+    "trainedAt": "2026-09-19T15:29:53.694Z"
   },
   "sourceProvenance": {
-    "trainingSourceDigestSha256": "4d2f8a3df2a7b1c23c7b9543a575a389e10bd7df7f98ea829b0433120ef0e3da",
+    "trainingSourceDigestSha256": "9288cdad5f1092a8b897c2603c1982e9df6173a9d6fec0f6484219926637d886",
     "digestNote": "training/src/*.ts 전체(파일명순 정렬) 내용의 SHA-256 — 이 값이 나오는 소스가 이 모델을 만든 코드다.",
-    "gitCommitAtGenerationTime": "c943ef29e795e7494944bc4c11161642bd20ba14",
+    "gitCommitAtGenerationTime": "c0819e61ddc49322e57d2b214f9aa5d60a045518",
     "gitCommitNote": "이 값은 evaluate.ts 실행 시점의 HEAD다. model-manifest.json 자체가 training/ 코드와 같은 커밋으로 함께 커밋되므로, 이 커밋 해시 하나만으로는 생성 코드를 재현할 수 없다(리뷰 지적) — 위 digest를 신뢰하거나, 이 manifest 파일이 실제로 들어있는 커밋(git log -- training/model/model-manifest.json)을 봐야 한다."
   },
   "license": "저장소 프로젝트 라이선스 미확정 — README.md '라이선스·권리' 참고",
