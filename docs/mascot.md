@@ -15,7 +15,7 @@ AI 마스코트의 이름은 서비스와 같은 **Mr.Park(미스터팍)**입니
 
 ## 현재 성능과 기록
 
-현재 artifact `parking-mlp-v1`, 체크섬 `1f5b7772bc4322d3e0a418cd99e5b41983068c16fab027fba87ad56dc7487681`입니다. [학습 파이프라인](../training/README.md)의 소규모 heldout 결과는 **성공 0/1, 충돌 1/1**입니다. 웹 사용자 편집 맵에서의 성능은 검증되지 않았으며 주차 성공을 보장하지 않습니다. 센서/차량 호환성은 성능 보장이 아닙니다.
+현재 artifact `parking-mlp-v1`, 체크섬 `94a24384e078c72439203ecdfb95e201a2a53c5d49f96bfcc5e342534941846d`입니다(#17 과적합 해결 — 무작위 장애물 배치로 재학습). [학습 파이프라인](../training/README.md)의 소규모 heldout 결과는 **성공 0/1, 충돌 1/1**입니다. 웹 사용자 편집 맵에서의 성능은 검증되지 않았으며 주차 성공을 보장하지 않습니다. 센서/차량 호환성은 성능 보장이 아닙니다.
 
 로컬 저장을 켜면 `controllerKind=learned`, pinned policy version, `spectator` 시점 맥락, 실제 관측·행동·종료를 기록합니다. 사람의 입력은 빈 배열/아날로그 조향 null입니다. 기존 human 파일은 유지하지만 임의의 planner/unknown policy 기록은 받아들이지 않습니다. 정책 버전 교체 시 과거 learned 파일 지원은 별도 마이그레이션 범위입니다.
 
